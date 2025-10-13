@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园二手购物</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .modal-content input[type="text"],
+    .modal-content input[type="password"] {
+    width: 250px;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+           
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between; /* 将子元素均匀分布，第一个在左，最后一个在右 */
+            align-items: center;
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+        }
+       
+        
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+        .product-card {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 200px;
+            margin: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer; 
+        }
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .product-image {
+            width: 100%;
+            height: auto;
+        }
+        .product-info {
+            padding: 10px;
+        }
+        .product-title {
+            font-size: 16px;
+            margin: 0;
+        }
+        .product-price {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        /* 登录按钮样式 */
+        #loginButton {
+            background-color: #8fbafbca; /* 按钮背景颜色 */
+            color: white; /* 文字颜色 */
+            border: none; /* 去掉边框 */
+            padding: 10px 20px; /* 内边距 */
+            border-radius: 5px; /* 圆角 */
+            cursor: pointer; /* 鼠标悬停时变成手型 */
+            transition: background-color 0.3s ease; /* 平滑过渡效果 */
+        }
+
+        #loginButton:hover {
+            background-color: #c0392b; /* 鼠标悬停时的颜色变化 */
+        }
+
+        /* 模态对话框样式 */
+        .modal {
+            text-justify:auto;
+            display: none; /* 默认隐藏 */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            text-align: center;
+            background-color: #fff; /* 白色背景 */
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #ccc; /* 边框颜色 */
+            border-radius: 10px; /* 圆角 */
+            width: 300px;
+            animation-name: animatetop;
+            animation-duration: 0.4s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 阴影效果 */
+        }
+        .modal-content h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        @keyframes animatetop {
+            from {top:-300px; opacity:0} 
+            to {top:15%; opacity:1}
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+
+        /* 购物车按钮样式 */
+        #cartButton {
+            position: fixed; /* 固定位置 */
+            bottom: 20px; /* 距离底部的距离 */
+            right: 20px; /* 距离右侧的距离 */
+            background-color: #e74c3c; /* 按钮背景颜色 */
+            color: white; /* 文字颜色 */
+            border: none; /* 去掉边框 */
+            padding: 15px; /* 内边距 */
+            border-radius: 50%; /* 圆形按钮 */
+            cursor: pointer; /* 鼠标悬停时变成手型 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* 阴影效果 */
+            transition: all 0.3s ease; /* 平滑过渡效果 */
+        }
+
+        #cartButton:hover {
+            background-color: #c0392b; /* 鼠标效果 */
+            transform: scale(1.1); /* 放大 */
+        }
+
+        .navbar img {
+            width: 30px; /* 设置图片宽度 */
+            height: 30px; /* 设置图片高度 */
+        }
+
+        /* 成功 */
+        .success-message {
+            display: none;
+            color: green;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* 失败 */
+        .error-message {
+            display: none;
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+        }
+        label{
+            font-size: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+
+        }
+
+        
+    </style>
+</head>
+<body>
+
+<div class="navbar animate__animated animate__fadeInDown">
+    <div>
+        <a href="#" class="animate__animated animate__fadeInLeft">
+            <img src="./img/22af9fcc-7909-4c89-b9cc-f0f00684a8bf.png" alt="首页" title="首页"></a>
+    </div>
+    <div class="logo">
+        <h1>广科二手网</h1>
+    </div>
+    <div>
+        <button id="loginButton" class="animate__animated animate__fadeInRight">登录</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="product-card animate__animated animate__zoomIn" onclick="window.location.href='laptop.html'">
+        <img src="./img/3.jpg" alt="Product Image" class="product-image">
+        <div class="product-info">
+            <p class="product-title">蛟龙16pro</p>
+            <p class="product-price">￥5000</p>
+        </div>
+    </div>
+    <div class="product-card animate__animated animate__zoomIn" onclick="window.location.href='phone.html'">
+        <img src="./img/1.jpg" alt="Product Image" class="product-image">
+        <div class="product-info">
+            <p class="product-title">荣耀MagicBook V 14</p>
+            <p class="product-price">￥5299</p>
+        </div>
+    </div>
+    <div class="product-card animate__animated animate__zoomIn" onclick="window.location.href='xiaomi13.html'">
+        <img src="./img/2.jpg" alt="Product Image" class="product-image">
+        <div class="product-info">
+            <p class="product-title">小米13 Ultra</p>
+            <p class="product-price">￥3999</p>
+        </div>
+    </div>
+    <div class="product-card animate__animated animate__zoomIn" onclick="window.location.href='matebook.html'">
+        <img src="./img/4.jpg" alt="Product Image" class="product-image">
+        <div class="product-info">
+            <p class="product-title">华为MateBook D 14英寸</p>
+            <p class="product-price">￥4500</p>
+        </div>
+    </div>
+    <div class="product-card animate__animated animate__zoomIn" onclick="window.location.href='matebook.html'">
+        <img src="./img/4.jpg" alt="Product Image" class="product-image">
+        <div class="product-info">
+            <p class="product-title">华为MateBook D 14英寸</p>
+            <p class="product-price">￥4500</p>
+        </div>
+    </div>
+    <div class="product-card animate__animated animate__zoomIn" onclick="window.location.href='matebook.html'">
+        <img src="./img/4.jpg" alt="Product Image" class="product-image">
+        <div class="product-info">
+            <p class="product-title">华为MateBook D 14英寸</p>
+            <p class="product-price">￥4500</p>
+        </div>
+    </div>
+    
+</div>
+
+<!-- 登录模态对话框 -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>登录</h2>
+        <form id="loginForm">
+            <label for="username">用户名:</label>
+            <input type="text" id="username" name="username" required>
+            <br><br>
+            <label for="password">密码:</label>
+            <input type="password" id="password" name="password" required>
+            <br><br>
+            <button type="submit">登录</button>
+        </form>
+        <div class="success-message">登录成功！</div>
+        <div class="error-message">用户名或密码错误！</div>
+    </div>
+</div>
+
+<!-- 购物车按钮 -->
+<button id="cartButton" class="animate__animated animate__bounceInUp">
+    <i class="fas fa-shopping-cart"></i>
+</button>
+
+<script>
+    // 获取模态元素
+    var modal = document.getElementById("loginModal");
+
+    // 获取打开模态的按钮
+    var btn = document.getElementById("loginButton");
+
+    // 获取关闭模态的 <span> 元素
+    var span = document.getElementsByClassName("close-button")[0];
+
+    // 获取成功和错误消息元素
+    var successMessage = document.querySelector('.success-message');
+    var errorMessage = document.querySelector('.error-message');
+
+    // 当用户点击按钮时，打开模态
+    btn.onclick = function() {
+        modal.style.display = "block";
+        // 清除之前的成功或错误消息
+        successMessage.style.display = "none";
+        errorMessage.style.display = "none";
+    }
+
+    // 当用户点击 <span> (x) 时，关闭模态
+    span.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    // 当用户点击模态以外的地方时，关闭模态
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    // 处理表单提交
+    document.getElementById("loginForm").addEventListener("submit", function(event) {
+        event.preventDefault(); // 阻止默认的表单提交行为
+        
+        var username = document.getElementById("username").value;
+        var password = document.getElementById("password").value;
+
+        // 假设这是正确的用户名和密码
+        const correctUsername = "0120240771";
+        const correctPassword = "123456";
+
+        if (username === correctUsername && password === correctPassword) {
+            // 登录成功
+            successMessage.style.display = "block";
+            errorMessage.style.display = "none";
+
+            // 关闭模态对话框
+            setTimeout(function() {
+                modal.style.display = "none";
+            }, 1000); // 2秒后自动关闭模态框
+
+            // 更新登录按钮为欢迎消息
+            btn.innerHTML = '欢迎, ' + username;
+            btn.disabled = true; // 禁用按钮
+        } else {
+            // 登录失败
+            errorMessage.style.display = "block";
+            successMessage.style.display = "none";
+        }
+    });
+
+    // 获取购物车按钮
+    var cartButton = document.getElementById("cartButton");
+
+    // 当用户点击购物车按钮时，执行相应操作
+    cartButton.onclick = function() {
+        window.location.href = 'cart.html';
+    };
+</script>
+
+</body>
+</html>

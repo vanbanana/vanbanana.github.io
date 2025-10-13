@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二手笔记本电脑 - 校园二手购物</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        .container {
+            padding: 20px;
+        }
+        .product-detail {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .product-image {
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        .product-title {
+            font-size: 24px;
+            margin: 0 0 10px;
+        }
+        .product-description {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .product-price {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .buy-button {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .buy-button:hover {
+            background-color: #27ae60;
+        }
+        .navbar img {
+            width: 30px;
+            height: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar animate__animated animate__fadeInDown">
+    <div>
+        <a href="index.html" class="animate__animated animate__fadeInLeft">
+            <img src="./img/22af9fcc-7909-4c89-b9cc-f0f00684a8bf.png" alt="首页" title="首页"></a>
+    </div>
+    <div>
+        <button id="loginButton" class="animate__animated animate__fadeInRight">登录</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="product-detail">
+        <img src="./img/4.jpg" alt="二手笔记本电脑" class="product-image">
+        <h1 class="product-title">华为MateBook</h1>
+        <p class="product-description">亲戚送的未拆封</p>
+        <p class="product-price">￥3999</p>
+        <button class="buy-button" onclick="addToCart('laptop')">加入购物车</button>
+        <button class="buy-button" onclick="window.location.href='cart.html'">立即购买</button>
+    </div>
+</div>
+
+<script>
+    function addToCart(productId) {
+        alert(`已将 ${productId} 加入购物车`);
+        // 这里可以添加实际的逻辑，比如将产品信息存储到 localStorage 或发送到服务器
+    }
+</script>
+
+</body>
+</html>

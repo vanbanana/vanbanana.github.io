@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>付款界面 - 校园二手购物</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        .container {
+            position: relative;
+            width: 100%;
+            text-align: center; /* 文本居中 */
+            margin: 20px auto; /* 容器水平居中 */
+        }
+        .add-item-button {
+            display: block;
+            width: 100%;
+            max-width: 800px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin: 20px auto; 
+        }
+        .add-item-button:hover {
+            background-color: #27ae60;
+        }
+        .cart-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin: 20px auto;
+        }
+        .cart-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin: 20px auto;
+        }
+        .product-image {
+            width: 100px;
+            height: auto;
+            margin-right: 20px;
+            margin: 20px auto;
+        }
+        .product-details {
+            flex-grow: 1;
+            margin: 20px auto;
+        }
+        .product-title {
+            font-size: 18px;
+            margin: 0;
+            margin: 20px auto;
+        }
+        .product-price {
+            color: #e74c3c;
+            font-weight: bold;
+            margin: 20px auto;
+        }
+        .remove-button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-left: 20px;
+            margin: 20px auto;
+        }
+        .remove-button:hover {
+            background-color: #c0392b;
+        }
+        .checkout-button {
+            display:inline-block;
+            margin: 20px auto; 
+            width: 100%;
+            max-width: 800px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+        .checkout-button:hover {
+            background-color: #27ae60;
+        }
+        .total-price {
+            margin: 20px auto; /* 垂直间距，并且水平居中 */
+            text-align: center; /* 文本居中 */
+        }
+        .empty-cart-message {
+            text-align: center;
+            font-size: 18px;
+            color: #888;
+            margin-top: 50px;
+        }
+
+        /* 模态对话框样式 */
+        .modal {
+            display: none; /* 默认隐藏 */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* 商品列表样式 */
+        .items-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .items-list li {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .items-list li:last-child {
+            border-bottom: none;
+        }
+
+        .items-list li:hover {
+            background-color: #f9f9f9;
+        }
+
+        .item-image {
+            width: 50px;
+            height: auto;
+            margin-right: 15px;
+        }
+
+        .item-details {
+            flex-grow: 1;
+        }
+        .navbar img {
+            width: 30px; /* 设置图片宽度 */
+            height: 30px; /* 设置图片高度 */
+        }
+
+        .item-name {
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .item-price {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .confirm-add-item-button {
+            display: block;
+            width: 100%;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .confirm-add-item-button:hover {
+            background-color: #27ae60;
+        }
+
+        .parent-element {
+            position: relative;
+        }
+        .back-to-cart-button{
+            display:inline-block;
+            margin: 20px auto; 
+            width: 100%;
+            max-width: 800px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .child-element {
+            position: absolute;
+            top: 50%; /* 相对于父元素顶部50% */
+            left: 50%; /* 相对于父元素左侧50% */
+            transform: translate(-50%, -50%); /* 平移自身宽度和高度的一半 */
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar animate__animated animate__fadeInDown">
+    <div>
+        <a href="index.html" class="animate__animated animate__fadeInLeft">
+            <img src="./img/22af9fcc-7909-4c89-b9cc-f0f00684a8bf.png" alt="首页" title="首页"></a>
+    </div>
+    
+</div>
+
+<div class="container">
+    <h1>付款界面</h1>
+    
+    <!-- 返回购物车按钮 -->
+    <button id="backToCartButton" class="back-to-cart-button">返回购物车</button>
+    
+    <!-- 订单摘要 -->
+    <div class="order-summary">
+        <h2>订单摘要</h2>
+    </div>
+    
+    <!-- 卖家信息 -->
+    <div class="seller-info">
+        <h2>卖家信息</h2>
+        <div class="seller-contact">
+            <p class="seller-phone"><strong>电话:</strong> 17896639079</p>
+            <p class="seller-address"><strong>地址:</strong> 宿舍楼栋号19栋</p>
+        </div>
+    </div>
+    
+    <!-- 总价 -->
+    <div class="total-price">总价: ￥0</div>
+    
+    <!-- 结算按钮 -->
+    <button class="checkout-button">确认支付</button>
+</div>
+
+<script>
+    // 从 localStorage 读取购物车信息
+    var cartItems = JSON.parse(localStorage.getItem('cart')) || [];
+
+    // 动态生成订单摘要
+    var orderSummaryContainer = document.querySelector('.order-summary');
+
+    // 清空现有的订单摘要内容
+    orderSummaryContainer.innerHTML = '<h2>订单摘要</h2>';
+
+    // 初始化总价
+    var totalPrice = 0;
+
+    // 遍历购物车中的每个商品并生成相应的 HTML 元素
+    cartItems.forEach(function(item) {
+        var orderItemDiv = document.createElement('div');
+        orderItemDiv.className = 'order-item';
+
+        var productImage = document.createElement('img');
+        productImage.src = item.image || "https://via.placeholder.com/100x100";
+        productImage.alt = "Product Image";
+        productImage.className = "order-product-image";
+
+        var productDetailsDiv = document.createElement('div');
+        productDetailsDiv.className = "order-product-details";
+
+        var productTitle = document.createElement('p');
+        productTitle.className = "order-product-title";
+        productTitle.textContent = item.title;
+
+        var productPrice = document.createElement('p');
+        productPrice.className = "order-product-price";
+        productPrice.textContent = "￥" + item.price;
+
+        productDetailsDiv.appendChild(productTitle);
+        productDetailsDiv.appendChild(productPrice);
+
+        orderItemDiv.appendChild(productImage);
+        orderItemDiv.appendChild(productDetailsDiv);
+
+        orderSummaryContainer.appendChild(orderItemDiv);
+
+        // 累计总价
+        totalPrice += parseFloat(item.price);
+    });
+
+    // 更新总价显示
+    document.querySelector('.total-price').textContent = '总价: ￥' + totalPrice.toFixed(2);
+
+    // 获取返回购物车按钮
+    var backToCartButton = document.getElementById('backToCartButton');
+
+    // 为返回购物车按钮添加点击事件监听器
+    backToCartButton.addEventListener('click', function() {
+        window.location.href = 'cart.html'; // 跳转回购物车页面
+    });
+
+    // 获取确认支付按钮
+    var checkoutButton = document.querySelector('.checkout-button');
+
+    // 为确认支付按钮添加点击事件监听器
+    checkoutButton.addEventListener('click', function() {
+        // 将购物车信息转换为 JSON 字符串
+        var cartData = JSON.stringify(cartItems);
+
+        // 使用 URL 参数传递数据
+        window.location.href = 'confirmation.html?cart=' + encodeURIComponent(cartData);
+
+        // 或者使用表单提交的方式传递数据
+        /*
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'confirmation.html';
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'cart';
+        input.value = cartData;
+
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+        */
+
+        // 这里可以替换为实际的支付逻辑
+        // 清空购物车或重定向到其他页面
+    });
+</script>
+
+</body>
+</html>
