@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSAP 动画演示</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; padding: 20px; }
+.container { max-width: 600px; margin: 0 auto; }
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.tab { padding: 8px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #94a3b8; font-size: 13px; cursor: pointer; }
+.tab:hover { background: rgba(255,255,255,0.08); color: #f1f5f9; }
+.tab.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+
+.preview { min-height: 220px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+
+.stagger-demo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 350px; }
+.stagger-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; }
+.stagger-item .icon { font-size: 20px; }
+.stagger-item .text { font-size: 12px; }
+
+.hover-demo { display: flex; gap: 16px; }
+.hover-card { width: 100px; padding: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; text-align: center; cursor: pointer; }
+.hover-card .icon { font-size: 32px; margin-bottom: 8px; }
+.hover-card .title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.hover-card .desc { font-size: 10px; color: #94a3b8; }
+
+.entrance-demo { text-align: center; }
+.entrance-demo h2 { font-size: 28px; margin-bottom: 8px; }
+.entrance-demo p { font-size: 14px; color: #94a3b8; margin-bottom: 16px; }
+.entrance-demo button { padding: 12px 28px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border: none; border-radius: 24px; color: white; font-size: 14px; cursor: pointer; }
+
+.typewriter-demo { text-align: center; }
+.typewriter-text { font-size: 22px; }
+.cursor { animation: blink 1s infinite; color: #3b82f6; }
+@keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+
+.play-btn { display: block; margin: 0 auto; padding: 10px 24px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-size: 13px; cursor: pointer; }
+.play-btn:disabled { opacity: 0.5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('stagger')">交错动画</div>
+    <div class="tab" onclick="switchTab('hover')">悬停效果</div>
+    <div class="tab" onclick="switchTab('entrance')">入场动画</div>
+    <div class="tab" onclick="switchTab('typewriter')">打字机</div>
+  </div>
+
+  <div class="preview" id="preview"></div>
+
+  <button class="play-btn" id="playBtn" onclick="playAnimation()">▶ 播放动画</button>
+</div>
+
+<script>
+let currentTab = 'stagger';
+let isPlaying = false;
+
+const demos = {
+  stagger: `
+    <div class="stagger-demo">
+      <div class="stagger-item"><span class="icon">📝</span><span class="text">列表项 1</span></div>
+      <div class="stagger-item"><span class="icon">🎨</span><span class="text">列表项 2</span></div>
+      <div class="stagger-item"><span class="icon">🚀</span><span class="text">列表项 3</span></div>
+      <div class="stagger-item"><span class="icon">💡</span><span class="text">列表项 4</span></div>
+      <div class="stagger-item"><span class="icon">⚡</span><span class="text">列表项 5</span></div>
+      <div class="stagger-item"><span class="icon">🎯</span><span class="text">列表项 6</span></div>
+    </div>
+  `,
+  hover: `
+    <div class="hover-demo">
+      <div class="hover-card" onmouseenter="hoverIn(this)" onmouseleave="hoverOut(this)">
+        <div class="icon">🎮</div>
+        <div class="title">游戏</div>
+        <div class="desc">悬停查看</div>
+      </div>
+      <div class="hover-card" onmouseenter="hoverIn(this)" onmouseleave="hoverOut(this)">
+        <div class="icon">🎬</div>
+        <div class="title">视频</div>
+        <div class="desc">悬停查看</div>
+      </div>
+      <div class="hover-card" onmouseenter="hoverIn(this)" onmouseleave="hoverOut(this)">
+        <div class="icon">🎵</div>
+        <div class="title">音乐</div>
+        <div class="desc">悬停查看</div>
+      </div>
+    </div>
+  `,
+  entrance: `
+    <div class="entrance-demo">
+      <h2 class="e-title">欢迎来到我的博客</h2>
+      <p class="e-subtitle">探索技术与创意的交汇点</p>
+      <button class="e-btn">开始探索</button>
+    </div>
+  `,
+  typewriter: `
+    <div class="typewriter-demo">
+      <span class="typewriter-text" id="twText"></span><span class="cursor">|</span>
+    </div>
+  `
+};
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('preview').innerHTML = demos[tab];
+  if (tab === 'stagger') playStagger();
+}
+
+function playAnimation() {
+  if (isPlaying) return;
+  switch(currentTab) {
+    case 'stagger': playStagger(); break;
+    case 'entrance': playEntrance(); break;
+    case 'typewriter': playTypewriter(); break;
+  }
+}
+
+function playStagger() {
+  isPlaying = true;
+  const items = document.querySelectorAll('.stagger-item');
+  gsap.set(items, { opacity: 0, y: 20, scale: 0.95 });
+  gsap.to(items, {
+    opacity: 1, y: 0, scale: 1,
+    duration: 0.4, stagger: 0.08, ease: 'power3.out',
+    onComplete: () => { isPlaying = false; }
+  });
+}
+
+function playEntrance() {
+  isPlaying = true;
+  gsap.set('.e-title', { opacity: 0, y: 40 });
+  gsap.set('.e-subtitle', { opacity: 0, y: 30 });
+  gsap.set('.e-btn', { opacity: 0, scale: 0.8 });
+  
+  const tl = gsap.timeline({ onComplete: () => { isPlaying = false; } });
+  tl.to('.e-title', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
+    .to('.e-subtitle', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.4')
+    .to('.e-btn', { opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.7)' }, '-=0.3');
+}
+
+function playTypewriter() {
+  isPlaying = true;
+  const text = '我是一个独立游戏开发者，有合作意愿请联系！';
+  const el = document.getElementById('twText');
+  el.textContent = '';
+  let i = 0;
+  function type() {
+    if (i < text.length) {
+      el.textContent += text.charAt(i);
+      i++;
+      setTimeout(type, 60);
+    } else {
+      isPlaying = false;
+    }
+  }
+  type();
+}
+
+function hoverIn(el) {
+  gsap.to(el, { y: -8, scale: 1.05, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', duration: 0.3, ease: 'power2.out' });
+}
+
+function hoverOut(el) {
+  gsap.to(el, { y: 0, scale: 1, boxShadow: 'none', duration: 0.3, ease: 'power2.out' });
+}
+
+// 初始化
+document.getElementById('preview').innerHTML = demos.stagger;
+setTimeout(playStagger, 300);
+</script>
+</body>
+</html>

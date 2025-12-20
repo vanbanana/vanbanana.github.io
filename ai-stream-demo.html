@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 流式输出演示</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; padding: 16px; }
+.container { max-width: 500px; margin: 0 auto; }
+.chat-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
+.chat-header { padding: 12px 16px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+.chat-header .icon { font-size: 20px; }
+.chat-header .info strong { display: block; font-size: 14px; }
+.chat-header .info .status { font-size: 11px; color: #10b981; }
+.chat-messages { padding: 16px; min-height: 250px; max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.message { display: flex; gap: 10px; max-width: 85%; }
+.message.user { align-self: flex-end; flex-direction: row-reverse; }
+.message .avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.message .content { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+.message.user .content { background: #3b82f6; color: white; border-bottom-right-radius: 4px; }
+.message.assistant .content { background: rgba(255,255,255,0.1); border-bottom-left-radius: 4px; }
+.cursor { animation: blink 1s infinite; color: #3b82f6; }
+@keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+.chat-input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); }
+.chat-input input { flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; font-size: 13px; }
+.chat-input input:focus { outline: none; border-color: #3b82f6; }
+.chat-input button { padding: 10px 20px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-size: 13px; cursor: pointer; }
+.chat-input button:disabled { opacity: 0.5; }
+.welcome { text-align: center; padding: 20px; color: #94a3b8; font-size: 13px; }
+.tips { margin-top: 16px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; }
+.tips h4 { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+.tips p { font-size: 11px; color: #64748b; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="chat-box">
+    <div class="chat-header">
+      <span class="icon">🤖</span>
+      <div class="info">
+        <strong>AI 助手</strong>
+        <span class="status" id="status">在线</span>
+      </div>
+    </div>
+    <div class="chat-messages" id="messages">
+      <div class="welcome">👋 你好！试试输入"推荐文章"或"学习Vue"</div>
+    </div>
+    <div class="chat-input">
+      <input id="input" placeholder="输入消息..." onkeydown="if(event.key==='Enter')sendMessage()" />
+      <button onclick="sendMessage()" id="sendBtn">发送</button>
+    </div>
+  </div>
+  <div class="tips">
+    <h4>💡 流式输出原理</h4>
+    <p>使用 Server-Sent Events (SSE) 实现实时流式响应，无需等待完整回复即可开始显示内容，提升用户体验。</p>
+  </div>
+</div>
+
+<script>
+const responses = {
+  '推荐': '根据你的兴趣，我推荐以下文章：\n\n📝 Vue 3 Composition API 入门\n📝 GSAP 动画实战指南\n📝 TypeScript 类型体操\n\n这些文章涵盖了前端开发的核心技术栈。',
+  '学习': '我可以帮你制定学习计划！\n\n1. 📚 生成学习指南\n2. ❓ 创建知识测验\n3. 🎴 制作复习闪卡\n\n请告诉我你想学习什么主题？',
+  'vue': 'Vue 3 是一个渐进式 JavaScript 框架。\n\n核心特性：\n• Composition API - 更好的逻辑复用\n• 响应式系统 - 基于 Proxy\n• 更小的包体积\n• 更好的 TypeScript 支持',
+  'default': '你好！我是博客 AI 助手，可以帮你：\n\n• 推荐相关文章\n• 解答技术问题\n• 生成学习计划\n\n有什么我可以帮助你的吗？'
+};
+
+let isStreaming = false;
+
+function getResponse(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes('推荐') || m.includes('文章')) return responses['推荐'];
+  if (m.includes('学习') || m.includes('学')) return responses['学习'];
+  if (m.includes('vue')) return responses['vue'];
+  return responses['default'];
+}
+
+function addMessage(role, content, streaming = false) {
+  const container = document.getElementById('messages');
+  const welcome = container.querySelector('.welcome');
+  if (welcome) welcome.remove();
+  
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+  div.innerHTML = `
+    <div class="avatar">${role === 'user' ? '👤' : '🤖'}</div>
+    <div class="content">${content}${streaming ? '<span class="cursor">|</span>' : ''}</div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+async function streamText(element, text) {
+  const contentEl = element.querySelector('.content');
+  let current = '';
+  for (let i = 0; i < text.length; i++) {
+    current += text[i];
+    contentEl.innerHTML = current + '<span class="cursor">|</span>';
+    document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+    await new Promise(r => setTimeout(r, 25 + Math.random() * 15));
+  }
+  contentEl.innerHTML = current;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('input');
+  const msg = input.value.trim();
+  if (!msg || isStreaming) return;
+  
+  input.value = '';
+  isStreaming = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('status').textContent = '正在输入...';
+  
+  addMessage('user', msg);
+  await new Promise(r => setTimeout(r, 400));
+  
+  const response = getResponse(msg);
+  const msgEl = addMessage('assistant', '', true);
+  await streamText(msgEl, response);
+  
+  isStreaming = false;
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('status').textContent = '在线';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>前后端数据流可视化</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; padding: 20px; }
+.container { max-width: 700px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.header h3 { font-size: 16px; }
+.play-btn { padding: 10px 20px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-size: 13px; cursor: pointer; }
+.play-btn:disabled { opacity: 0.5; }
+
+.diagram { position: relative; height: 160px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.node { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 16px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 10px; transition: all 0.3s; }
+.node.on { border-color: #3b82f6; background: rgba(59,130,246,0.15); box-shadow: 0 0 20px rgba(59,130,246,0.4); }
+.node .icon { font-size: 28px; }
+.node .label { font-size: 11px; color: #94a3b8; }
+.node.client { left: 30px; top: 50%; transform: translateY(-50%); }
+.node.server { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.node.database { right: 30px; top: 50%; transform: translateY(-50%); }
+
+.line { position: absolute; top: 50%; height: 2px; background: rgba(255,255,255,0.1); }
+.line.l1 { left: 130px; width: 120px; }
+.line.l2 { right: 130px; width: 120px; }
+.line.on { background: #3b82f6; animation: dash 0.5s linear infinite; }
+@keyframes dash { to { background-position: 20px 0; } }
+
+.packet { position: absolute; font-size: 20px; opacity: 0; transition: all 0.4s ease-in-out; }
+
+.steps { display: flex; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 16px; }
+.step { display: flex; flex-direction: column; align-items: center; gap: 4px; opacity: 0.3; transition: opacity 0.3s; }
+.step.on { opacity: 1; }
+.step .icon { font-size: 18px; }
+.step .label { font-size: 10px; color: #94a3b8; }
+
+.data-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.data-box { padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; }
+.data-box label { display: block; font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; }
+.data-box code { font-family: 'JetBrains Mono', monospace; font-size: 11px; word-break: break-all; }
+.data-box.request code { color: #f59e0b; }
+.data-box.response code { color: #10b981; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h3>🔄 前后端数据流可视化</h3>
+    <button class="play-btn" id="playBtn" onclick="playFlow()">▶ 播放流程</button>
+  </div>
+
+  <div class="diagram">
+    <div class="node client" id="n-client"><span class="icon">🖥️</span><span class="label">前端 (Vue)</span></div>
+    <div class="line l1" id="line1"></div>
+    <div class="node server" id="n-server"><span class="icon">⚙️</span><span class="label">后端 (Express)</span></div>
+    <div class="line l2" id="line2"></div>
+    <div class="node database" id="n-database"><span class="icon">🗄️</span><span class="label">PostgreSQL</span></div>
+    <div class="packet" id="packet">📦</div>
+  </div>
+
+  <div class="steps">
+    <div class="step" id="s-click"><span class="icon">👆</span><span class="label">用户操作</span></div>
+    <div class="step" id="s-request"><span class="icon">📤</span><span class="label">HTTP 请求</span></div>
+    <div class="step" id="s-process"><span class="icon">⚙️</span><span class="label">服务器处理</span></div>
+    <div class="step" id="s-query"><span class="icon">🗄️</span><span class="label">数据库查询</span></div>
+    <div class="step" id="s-response"><span class="icon">📥</span><span class="label">返回响应</span></div>
+    <div class="step" id="s-render"><span class="icon">🖥️</span><span class="label">渲染页面</span></div>
+  </div>
+
+  <div class="data-boxes">
+    <div class="data-box request"><label>请求</label><code id="reqText">-</code></div>
+    <div class="data-box response"><label>响应</label><code id="resText">-</code></div>
+  </div>
+</div>
+
+<script>
+let isPlaying = false;
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+function setStep(step) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('on'));
+  if (step) document.getElementById('s-' + step)?.classList.add('on');
+}
+
+function setNode(node) {
+  document.querySelectorAll('.node').forEach(n => n.classList.remove('on'));
+  if (node) document.getElementById('n-' + node)?.classList.add('on');
+}
+
+function setLine(line, on) {
+  const el = document.getElementById('line' + line);
+  if (on) el.classList.add('on'); else el.classList.remove('on');
+}
+
+function movePacket(from, to) {
+  const packet = document.getElementById('packet');
+  const positions = { client: 70, server: 320, database: 570 };
+  packet.style.left = positions[from] + 'px';
+  packet.style.top = '70px';
+  packet.style.opacity = '1';
+  setTimeout(() => { packet.style.left = positions[to] + 'px'; }, 50);
+  setTimeout(() => { packet.style.opacity = '0'; }, 500);
+}
+
+async function playFlow() {
+  if (isPlaying) return;
+  isPlaying = true;
+  document.getElementById('playBtn').disabled = true;
+  document.getElementById('playBtn').textContent = '播放中...';
+
+  // 1. 用户点击
+  setStep('click'); setNode('client');
+  document.getElementById('reqText').textContent = '-';
+  document.getElementById('resText').textContent = '-';
+  await delay(600);
+
+  // 2. 发送请求
+  setStep('request');
+  document.getElementById('reqText').textContent = 'GET /api/articles';
+  setLine(1, true); movePacket('client', 'server');
+  await delay(700);
+  setLine(1, false);
+
+  // 3. 服务器处理
+  setStep('process'); setNode('server');
+  document.getElementById('reqText').textContent = 'Express 路由处理';
+  await delay(600);
+
+  // 4. 数据库查询
+  setStep('query'); setNode('database');
+  document.getElementById('reqText').textContent = 'SELECT * FROM articles';
+  setLine(2, true); movePacket('server', 'database');
+  await delay(700);
+  setLine(2, false);
+
+  // 5. 返回响应
+  setStep('response'); setNode('server');
+  document.getElementById('resText').textContent = '{ data: [...], meta: {...} }';
+  setLine(2, true); movePacket('database', 'server');
+  await delay(500);
+  setLine(2, false);
+  setLine(1, true); movePacket('server', 'client');
+  await delay(700);
+  setLine(1, false);
+
+  // 6. 渲染页面
+  setStep('render'); setNode('client');
+  document.getElementById('resText').textContent = '更新 Vue 响应式数据';
+  await delay(800);
+
+  setStep(null); setNode(null);
+  isPlaying = false;
+  document.getElementById('playBtn').disabled = false;
+  document.getElementById('playBtn').textContent = '▶ 播放流程';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dock 栏悬停效果</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', system-ui, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+h3 { color: #f1f5f9; font-size: 18px; margin-bottom: 8px; }
+p { color: #94a3b8; font-size: 13px; margin-bottom: 30px; }
+.dock { display: flex; align-items: flex-end; gap: 6px; padding: 12px 16px; background: rgba(0,0,0,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; }
+.dock-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; cursor: pointer; transition: transform 0.15s ease-out; transform-origin: bottom center; }
+.dock-item .icon { font-size: 40px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); transition: transform 0.15s ease-out; }
+.dock-item .label { font-size: 10px; color: #94a3b8; opacity: 0; transition: opacity 0.2s; }
+.dock-item:hover .label { opacity: 1; }
+.info { margin-top: 40px; display: flex; gap: 20px; }
+.info-item { padding: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; text-align: center; }
+.info-item .icon { font-size: 24px; margin-bottom: 8px; }
+.info-item strong { display: block; color: #f1f5f9; font-size: 13px; margin-bottom: 4px; }
+.info-item span { color: #94a3b8; font-size: 11px; }
+</style>
+</head>
+<body>
+<h3>🎯 Dock 栏悬停效果</h3>
+<p>移动鼠标到图标上查看放大效果</p>
+
+<div class="dock" id="dock">
+  <div class="dock-item"><span class="icon">🏠</span><span class="label">首页</span></div>
+  <div class="dock-item"><span class="icon">📝</span><span class="label">博客</span></div>
+  <div class="dock-item"><span class="icon">🎨</span><span class="label">作品</span></div>
+  <div class="dock-item"><span class="icon">🔖</span><span class="label">书签</span></div>
+  <div class="dock-item"><span class="icon">📚</span><span class="label">学习</span></div>
+  <div class="dock-item"><span class="icon">⚙️</span><span class="label">设置</span></div>
+</div>
+
+<div class="info">
+  <div class="info-item">
+    <div class="icon">📐</div>
+    <strong>距离计算</strong>
+    <span>计算鼠标与图标中心距离</span>
+  </div>
+  <div class="info-item">
+    <div class="icon">📈</div>
+    <strong>缩放映射</strong>
+    <span>距离越近，放大越多</span>
+  </div>
+  <div class="info-item">
+    <div class="icon">🎯</div>
+    <strong>影响范围</strong>
+    <span>150px 范围内生效</span>
+  </div>
+</div>
+
+<script>
+const dock = document.getElementById('dock');
+const items = dock.querySelectorAll('.dock-item');
+let mouseX = null;
+
+dock.addEventListener('mousemove', (e) => {
+  const rect = dock.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  updateScales();
+});
+
+dock.addEventListener('mouseleave', () => {
+  mouseX = null;
+  updateScales();
+});
+
+function updateScales() {
+  items.forEach((item, index) => {
+    const itemWidth = item.offsetWidth + 6;
+    const itemCenter = index * itemWidth + itemWidth / 2 + 16;
+    
+    let scale = 1;
+    if (mouseX !== null) {
+      const distance = Math.abs(mouseX - itemCenter);
+      const maxDistance = 150;
+      if (distance < maxDistance) {
+        scale = 1 + (1 - distance / maxDistance) * 0.5;
+      }
+    }
+    item.style.transform = `scale(${scale})`;
+  });
+}
+</script>
+</body>
+</html>
