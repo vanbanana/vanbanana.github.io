@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人工智能数据服务 - 沉浸式复习模式</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+            --code-bg: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: var(--card-bg);
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .question-nav-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            color: #6b7280;
+            margin-bottom: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+
+        .nav-btn {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .nav-btn.active { border-color: var(--primary-color); background-color: #eff6ff; color: var(--primary-color); font-weight: bold; }
+        /* 复习模式下，答题后立即变色 */
+        .nav-btn.correct { background-color: var(--success-color); color: white; border-color: var(--success-color); }
+        .nav-btn.wrong { background-color: var(--error-color); color: white; border-color: var(--error-color); }
+        .nav-btn.code-done { background-color: #8b5cf6; color: white; border-color: #8b5cf6; } /* 紫色表示实操题已看 */
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .top-bar {
+            background: var(--card-bg);
+            padding: 15px 30px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .score-board {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .score-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .score-val { color: var(--primary-color); font-size: 1.2em; }
+
+        .controls button {
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-reset { background-color: #6b7280; color: white; }
+        .btn-reset:hover { background-color: #4b5563; }
+
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            scroll-behavior: smooth;
+        }
+
+        .question-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        /* 状态样式 */
+        .question-card.correct-answer { border-left-color: var(--success-color); background-color: #f0fdf4; }
+        .question-card.wrong-answer { border-left-color: var(--error-color); background-color: #fef2f2; }
+
+        .q-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding-bottom: 10px;
+        }
+
+        .q-type {
+            font-size: 0.85em;
+            background: #e5e7eb;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #374151;
+        }
+
+        .q-text { font-size: 1.1em; margin-bottom: 20px; font-weight: 500; white-space: pre-wrap; }
+
+        .options-list { display: flex; flex-direction: column; gap: 10px; }
+        
+        /* 选项样式 - 交互增强 */
+        .option-item {
+            display: flex; padding: 12px 15px; border: 1px solid #e5e7eb; border-radius: 6px;
+            cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .option-item:hover { background-color: #f9fafb; border-color: #d1d5db; }
+        
+        /* 禁用后的选项样式 */
+        .question-card.view-mode .option-item { cursor: default; }
+        .question-card.view-mode .option-item:hover { background-color: transparent; }
+        
+        /* 选中/正确/错误 样式 */
+        .option-item.selected { border-color: var(--primary-color); background-color: #eff6ff; }
+        .option-item.is-correct { border-color: var(--success-color); background-color: #d1fae5; font-weight: bold; }
+        .option-item.is-wrong { border-color: var(--error-color); background-color: #fee2e2; }
+
+        .option-item input[type="radio"] { margin-right: 10px; }
+
+        /* 填空题区域 */
+        .fill-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .fill-input {
+            flex: 1; padding: 10px; border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+        .btn-confirm {
+            background-color: var(--primary-color); color: white;
+            border: none; padding: 0 20px; border-radius: 6px;
+            cursor: pointer; height: 42px; font-weight: bold;
+        }
+        .btn-confirm:hover { background-color: #2563eb; }
+        .btn-confirm:disabled { background-color: #9ca3af; cursor: not-allowed; }
+
+        /* Short Answer / Code Styles */
+        .code-input {
+            width: 100%; height: 120px; padding: 10px;
+            border: 1px solid #d1d5db; border-radius: 6px;
+            font-family: monospace; margin-bottom: 10px;
+            resize: vertical;
+        }
+        .btn-toggle-answer {
+            background-color: #8b5cf6; color: white; border: none;
+            padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.95em;
+        }
+        .reference-answer-box {
+            margin-top: 15px; padding: 15px; background: #f8fafc;
+            border-radius: 6px; border: 1px solid #e2e8f0; display: none;
+        }
+        .code-block {
+            background-color: var(--code-bg); color: #e2e8f0;
+            padding: 15px; border-radius: 6px; overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace; margin-top: 10px;
+        }
+
+        /* Analysis Box */
+        .analysis-box {
+            margin-top: 20px; padding: 15px; background-color: #ffffff;
+            border-radius: 6px; border: 1px solid #e2e8f0; 
+            display: none; /* Hidden by default */
+            border-left: 4px solid var(--primary-color);
+        }
+        .show-analysis .analysis-box { display: block; animation: fadeIn 0.5s; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .status-correct { color: var(--success-color); font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        .status-wrong { color: var(--error-color); font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        .correct-answer-text { color: var(--success-color); font-weight: bold; font-size: 1.1em; }
+        .analysis-content { margin-top: 8px; color: #4b5563; }
+
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .sidebar { width: 100%; height: 200px; }
+            .nav-grid { grid-template-columns: repeat(10, 1fr); }
+            .score-board { font-size: 0.9em; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>人工智能数据服务<br>复习模式</h3>
+            <div style="font-size: 0.8em; margin-top:5px; opacity: 0.9;">做一题，对一题</div>
+        </div>
+        <div class="sidebar-content">
+            <div class="question-nav-section">
+                <div class="section-title">一、单选题</div>
+                <div class="nav-grid" id="nav-single"></div>
+            </div>
+            <div class="question-nav-section">
+                <div class="section-title">二、填空题</div>
+                <div class="nav-grid" id="nav-fill"></div>
+            </div>
+            <div class="question-nav-section">
+                <div class="section-title">三、判断题</div>
+                <div class="nav-grid" id="nav-judge"></div>
+            </div>
+            <div class="question-nav-section">
+                <div class="section-title">四、实操简答题</div>
+                <div class="nav-grid" id="nav-code"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="score-board">
+                <div class="score-item">
+                    <span>已答:</span>
+                    <span class="score-val" id="count-answered">0</span>
+                    <span>/ 128</span>
+                </div>
+                <div class="score-item">
+                    <span>正确:</span>
+                    <span class="score-val" style="color: var(--success-color);" id="count-correct">0</span>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="btn-reset" onclick="resetProgress()">重置所有进度</button>
+            </div>
+        </div>
+
+        <div class="scroll-area" id="questions-container"></div>
+    </div>
+</div>
+
+<script>
+    // ----------------------------------------------------------------
+    // 完整数据源
+    // ----------------------------------------------------------------
+    const allQuestions = [
+        // --- 第一部分：单选题 (1-61) ---
+        { id: 1, type: 'single', q: "人工智能数据服务的核心功能不包括以下哪一项?", options: ["数据采集", "数据清洗", "算力提供", "数据标注"], answer: "C", analysis: "核心功能包括采集、清洗、标注。算力提供属于基础设施层。" },
+        { id: 2, type: 'single', q: "人工智能数据服务的主要目的是为了什么?", options: ["提供算法开发工具", "提供高质量数据支持AI模型的训练和优化", "提供用户界面设计", "提供网络安全解决方案"], answer: "B", analysis: "核心目的是为模型提供燃料（数据）。" },
+        { id: 3, type: 'single', q: "AI技术被比作“燃料”的是什么?", options: ["算法", "数据", "算力", "处理器"], answer: "B", analysis: "数据是燃料，算法是引擎。" },
+        { id: 4, type: 'single', q: "个性化学习系统需要分析并标注什么类型的数据?", options: ["图像数据", "学习进度和知识掌握情况", "医疗影像", "物流数据"], answer: "B", analysis: "针对教育场景，关注学习进度。" },
+        { id: 5, type: 'single', q: "人工智能数据服务的质量直接影响以下哪一项?", options: ["AI模型的学习算法选择", "AI模型的精度和适应性", "用户界面的设计", "AI硬件的生产"], answer: "B", analysis: "Garbage in, garbage out。" },
+        { id: 6, type: 'single', q: "人工智能数据服务行业的发展历程可以分为几个主要阶段?", options: ["两个", "三个", "四个", "五个"], answer: "B", analysis: "早期、中期、后期三个阶段。" },
+        { id: 7, type: 'single', q: "人工智能历史上具有里程碑意义的事件——AlphaGo战胜李世石，发生在哪一年?", options: ["2015年", "2016年", "2017年", "2018年"], answer: "B", analysis: "2016年。" },
+        { id: 8, type: 'single', q: "随着技术的迭代和市场应用场景的扩展，国内市场需求有可能向哪种类型的数据服务需求转型?", options: ["图像类", "语音类", "自然语言类", "视频类"], answer: "C", analysis: "随着大模型兴起，NLP需求增加。" },
+        { id: 9, type: 'single', q: "在数据质检环节，AI技术相比人工质检有哪些优势?", options: ["更高的准确率", "更低的成本", "更高的时效性", "所有以上选项"], answer: "D", analysis: "AI辅助质检全方位提升效率。" },
+        { id: 10, type: 'single', q: "未来数据服务行业发展的主流趋势是什么?", options: ["完全自动化", "人机协作", "依赖人工操作", "专注于数据采集"], answer: "B", analysis: "Human-in-the-loop 人机协作。" },
+        { id: 11, type: 'single', q: "网络爬虫主要用于____。", options: ["数据存储", "数据采集", "数据传输", "数据加密"], answer: "B", analysis: "爬虫是采集工具。" },
+        { id: 12, type: 'single', q: "robots.txt文件的作用是____。", options: ["限制爬虫抓取频率", "指示爬虫哪些页面可以访问", "保护网站免受攻击", "提高网站加载速度"], answer: "B", analysis: "爬虫协议，指示允许/禁止抓取的路径。" },
+        { id: 13, type: 'single', q: "爬虫在抓取数据时，应当如何遵守robots.txt协议?", options: ["完全忽略", "遵守所有规则", "只遵守部分规则", "根据需要决定是否遵守"], answer: "B", analysis: "应当遵守。" },
+        { id: 14, type: 'single', q: "爬虫在抓取数据时，是否需要关注目标网站的隐私政策?", options: ["不需要", "需要", "仅当抓取个人信息时需要", "仅在商业用途时需要"], answer: "B", analysis: "合规性要求必须关注。" },
+        { id: 15, type: 'single', q: "BeautifulSoup库主要用于____。", options: ["数据存储", "数据采集", "数据解析", "数据传输"], answer: "C", analysis: "解析HTML/XML。" },
+        { id: 16, type: 'single', q: "lxml库主要使用____语言编写。", options: ["Python", "C++", "Java", "JavaScript"], answer: "A", analysis: "虽然底层是C，但在Python题目中通常指其Python接口，或题库认定为Python库。" },
+        { id: 17, type: 'single', q: "正则表达式中，用于匹配任意字符的元字符是____。", options: [".", "*", "?", "$"], answer: "A", analysis: "点号(.)匹配除换行符外的任意字符。" },
+        { id: 18, type: 'single', q: "端侧数据采集主要是指在____位置进行数据的收集工作。", options: ["服务器中心", "云计算平台", "设备或系统的末端", "数据库中"], answer: "C", analysis: "端侧=Device side。" },
+        { id: 19, type: 'single', q: "端侧数据采集时，以下哪个因素不是主要考虑的?", options: ["数据的实时性", "数据的准确性", "数据的传输速度", "数据的娱乐性"], answer: "D", analysis: "娱乐性无关。" },
+        { id: 20, type: 'single', q: "端侧数据采集是否依赖网络连接?", options: ["完全不依赖", "始终依赖", "可以依赖也可以不依赖", "仅在有WiFi时依赖"], answer: "C", analysis: "可离线采集，但也常需联网传输。" },
+        { id: 21, type: 'single', q: "在进行数据采集之前，以下哪项工作是必要的?", options: ["评估数据源的可靠性和有效性", "购买更多的存储设备", "增加数据处理速度", "更新系统软件"], answer: "A", analysis: "评估源头质量。" },
+        { id: 22, type: 'single', q: "摄像头的分辨率越高，则采集的图像质量会____。", options: ["越低", "越高", "不变", "无法确定"], answer: "B", analysis: "分辨率与细节正相关。" },
+        { id: 23, type: 'single', q: "Label Studio标注平台支持____类型的数据标注?", options: ["仅图像", "仅文本", "图像、文本、音频、视频", "仅视频"], answer: "C", analysis: "多模态支持。" },
+        { id: 24, type: 'single', q: "数据标注在人工智能领域中扮演的角色是____?", options: ["无关紧要", "至关重要", "轻微影响", "可有可无"], answer: "B", analysis: "至关重要。" },
+        { id: 25, type: 'single', q: "图像颜色变换不包括以下哪种操作?", options: ["色相调整", "饱和度调整", "亮度调整", "图像缩放"], answer: "D", analysis: "缩放是几何变换。" },
+        { id: 26, type: 'single', q: "图像裁剪时，以下哪种方式可以保持图像的比例?", options: ["自由裁剪", "固定尺寸裁剪", "按比例裁剪", "随机裁剪"], answer: "C", analysis: "按比例裁剪。" },
+        { id: 27, type: 'single', q: "同义词替换中，以下哪个词与“美丽”意思最接近?", options: ["丑陋", "漂亮", "凶恶", "普通"], answer: "B", analysis: "漂亮。" },
+        { id: 28, type: 'single', q: "数据标注流程中不包括以下____步骤?", options: ["数据收集", "数据清洗", "数据标注", "数据压缩"], answer: "D", analysis: "压缩不是标准流程。" },
+        { id: 29, type: 'single', q: "下列____标注方式适用于目标检测任务?", options: ["图像分类", "关键点标注", "边界框标注", "图像分割"], answer: "C", analysis: "检测用Bounding Box。" },
+        { id: 30, type: 'single', q: "CSV格式数据存储的主要特点是____。", options: ["支持复杂数据结构", "支持查询操作", "以纯文本形式存储", "数据安全性能高"], answer: "C", analysis: "逗号分隔值，纯文本。" },
+        { id: 31, type: 'single', q: "MongoDB属于____类数据库系统?", options: ["关系型数据库", "文档型数据库", "键值对数据库", "列式数据库"], answer: "B", analysis: "Document-oriented。" },
+        { id: 32, type: 'single', q: "文本情绪识别标注的方法中不包括以下____步骤?", options: ["文本数据准备", "文本数据预处理", "文本标注规范", "文本数据的语音转换"], answer: "D", analysis: "文本任务不涉及转语音。" },
+        { id: 33, type: 'single', q: "在标注工具选择时，以下____不是需要考虑的因素?", options: ["标注格式兼容性", "音频波形可视化能力", "标注工具的颜色", "可扩展性"], answer: "C", analysis: "UI颜色不重要。" },
+        { id: 34, type: 'single', q: "在视频数据标注中，标注者如何提交标注结果?", options: ["单击“保存”按钮", "单击“更新”按钮", "单击“提交”按钮", "单击“导出”按钮"], answer: "C", analysis: "提交(Submit)。" },
+        { id: 35, type: 'single', q: "在目标跟踪标注中，标注者通常需要为每个目标分配一个或多个____?", options: ["类别标签", "时间戳", "坐标点", "速度值"], answer: "A", analysis: "ID和类别标签。" },
+        { id: 36, type: 'single', q: "在目标跟踪标注中，以下____标注类型不适用于视频数据?", options: ["2D物体标注", "关键点标注", "文本标注", "语义分割"], answer: "C", analysis: "文本标注通常是NLP任务。" },
+        { id: 37, type: 'single', q: "图像数据标注质量的评估可以通过以下____方式进行?", options: ["计算标注者的工作速度", "对比标注结果与真实结果", "统计标注任务的数量", "收集标注者的个人信息"], answer: "B", analysis: "与Ground Truth对比。" },
+        { id: 38, type: 'single', q: "图像数据标注不包括以下____任务?", options: ["图像分类", "目标检测", "语音识别", "图像分割"], answer: "C", analysis: "语音识别是音频任务。" },
+        { id: 39, type: 'single', q: "图像数据标注在以下____领域应用广泛?", options: ["音频处理", "自然语言处理", "计算机视觉", "数字信号处理"], answer: "C", analysis: "CV领域。" },
+        { id: 40, type: 'single', q: "音频特征提取中，常用于表示音频节奏的是?", options: ["频谱特征", "节奏特征", "音高特征", "时长特征"], answer: "B", analysis: "节奏特征。" },
+        { id: 41, type: 'single', q: "以下哪种不是文本特征提取的方法?", options: ["词袋模型", "图像识别", "TF-IDF", "词性标注"], answer: "B", analysis: "图像识别。" },
+        { id: 42, type: 'single', q: "异常值处理中，以下____方法可能导致信息丢失?", options: ["修正异常值", "保留异常值", "删除异常值", "转换异常值"], answer: "C", analysis: "删除直接移除了数据。" },
+        { id: 43, type: 'single', q: "在重复项处理中，通常优先选择以下____方式?", options: ["保留第一条重复记录", "保留最后一条重复记录", "随机保留一条重复记录", "根据具体业务规则保留"], answer: "D", analysis: "依业务规则而定。" },
+        { id: 44, type: 'single', q: "以下____不属于常见的实体类别?", options: ["人名", "地名", "动物名", "组织机构名"], answer: "C", analysis: "动物名非常规NER类别。" },
+        { id: 45, type: 'single', q: "词性标注的主要作用是____。", options: ["确定单词的语法类别", "分割文本", "去除停用词", "计算文本相似度"], answer: "A", analysis: "POS tagging。" },
+        { id: 46, type: 'single', q: "分词处理的主要目的是____。", options: ["将文本分割成单词", "去除停用词", "标注词性", "识别实体"], answer: "A", analysis: "Segmentation。" },
+        { id: 47, type: 'single', q: "在颜色变换中，RGB到YUV的转换通常用于____目的?", options: ["色彩平衡调整", "色彩空间压缩", "亮度分离", "对比度增强"], answer: "D", analysis: "注意：虽然YUV常用于压缩，但题库标准答案为D。" },
+        { id: 48, type: 'single', q: "在HSV颜色空间中，____分量与颜色的明暗程度有关?", options: ["H", "S", "V", "以上都不是"], answer: "C", analysis: "V = Value (亮度)。" },
+        { id: 49, type: 'single', q: "HSV颜色空间中的“H”代表的是____。", options: ["亮度", "色相", "饱和度", "对比度"], answer: "B", analysis: "H = Hue (色相)。" },
+        { id: 50, type: 'single', q: "以下____操作不属于形状变换?", options: ["平移图像", "旋转图像", "调整图像亮度", "缩放图像"], answer: "C", analysis: "亮度调整不改变几何形状。" },
+        // --- 来自 "一.docx" 的新增题目 ---
+        { id: 51, type: 'single', q: "txt文本文件通常适用于(    )类型的数据存储。", options: ["大规模数据", "复杂数据结构", "实时数据分析", "小规模数据"], answer: "D", analysis: "txt适合简单、小规模文本数据，不支持复杂查询。" },
+        { id: 52, type: 'single', q: "摄像头采集数据时，以下哪个因素与数据采集的质量无关?", options: ["摄像头的分辨率", "摄像头的帧率", "摄像头的品牌", "环境光线条件"], answer: "C", analysis: "品牌不直接决定质量，参数（分辨率、帧率）和环境才决定。" },
+        { id: 53, type: 'single', q: "以下(    )方法通常不用于计算文本相似度。", options: ["余弦相似度", "欧式距离", "曼哈顿距离", "随机森林"], answer: "D", analysis: "随机森林是分类算法，前三者是距离/相似度度量。" },
+        { id: 54, type: 'single', q: "在图像处理中，以下(    )变换属于颜色变换?", options: ["旋转图像", "调整图像饱和度", "缩放图像", "裁剪图像"], answer: "B", analysis: "饱和度调整属于颜色空间变换，其他是几何变换。" },
+        { id: 55, type: 'single', q: "以下(    )操作主要用于去除文本中常见的无实际意义的词，如“的”。", options: ["分词处理", "停用词过滤", "词性标注", "实体识别"], answer: "B", analysis: "停用词过滤 (Stop word filtering)。" },
+        { id: 56, type: 'single', q: "文本情绪识别标注在心理健康辅助中的作用是(    )。", options: ["分析患者的对话记录", "识别情绪波动", "提供干预措施", "所有以上选项"], answer: "D", analysis: "全方位辅助。" },
+        { id: 57, type: 'single', q: "中文语音识别技术的核心目标是(    )?", options: ["提高计算机的存储容量", "将口头语言转化为机器可解读的文本信息", "加速互联网的连接速度", "增强图形处理的视觉效果"], answer: "B", analysis: "语音转文本 (ASR)。" },
+        { id: 58, type: 'single', q: "ImageNet项目是由(    )教授发起的?", options: ["李飞飞", "吴恩达", "杨立昆", "杰弗里·辛顿"], answer: "A", analysis: "李飞飞 (Fei-Fei Li)。" },
+
+        // --- 第二部分：填空题 (62-97) ---
+        { id: 62, type: 'fill', q: "人工智能数据服务的核心目的是为AI模型提供高质量的____，以确保模型能够从中学习并提高其表现。", answer: "数据", analysis: "数据是核心。" },
+        { id: 63, type: 'fill', q: "在AI领域，算法、____和数据是驱动技术革命的三驾马车。", answer: "算力", analysis: "算力。" },
+        { id: 64, type: 'fill', q: "人工智能数据服务包括数据的采集、标注、____和信息抽取等多个环节。", answer: "清洗", analysis: "清洗。" },
+        { id: 65, type: 'fill', q: "无人驾驶汽车的研发依赖于____和传感器融合技术。", answer: "计算机视觉", analysis: "Computer Vision。" },
+        { id: 66, type: 'fill', q: "人工智能数据服务行业的发展历程可以概括为三个主要阶段: ____、中期阶段和后期阶段。", answer: "早期阶段", analysis: "早期阶段。" },
+        { id: 67, type: 'fill', q: "在人工智能数据服务的早期阶段，数据服务行业主要以____和标注为核心业务。", answer: "数据采集", analysis: "采集。" },
+        { id: 68, type: 'fill', q: "在使用BeautifulSoup库解析HTML之前，通常需要先用____或urllib等库来获取网页的HTML内容。", answer: "requests", analysis: "requests库。" },
+        { id: 69, type: 'fill', q: "在视频监控系统中，摄像头的主要功能是____视频信号。", answer: "捕捉和传输", analysis: "捕捉和传输。" },
+        { id: 70, type: 'fill', q: "摄像头采集到的数据通常以____文件的形式存储。", answer: "视频或图像", analysis: "视频或图像。" },
+        { id: 71, type: 'fill', q: "MongoDB是一个基于文档的NoSQL数据库，其数据存储格式为____。", answer: "BSON", analysis: "BSON。" },
+        { id: 72, type: 'fill', q: "数据格式标准化会降低数据处理的效率。(判断正误)", answer: "错误", analysis: "标准化提高效率。" },
+        { id: 73, type: 'fill', q: "数据格式标准化可以将日期格式统一为____格式。", answer: "YYYY-MM-DD", analysis: "标准日期格式。" },
+        { id: 74, type: 'fill', q: "常见的缺失值处理方法有删除法、____和多重插补法。", answer: "填充法", analysis: "填充法。" },
+        { id: 75, type: 'fill', q: "分词处理是将文本分割成单词或词语。(判断正误)", answer: "正确", analysis: "定义正确。" },
+        { id: 76, type: 'fill', q: "使用jieba库进行词性标注时，返回的词性标注结果是____形式。", answer: "字符串", analysis: "String。" },
+        { id: 77, type: 'fill', q: "当行人部分显示在视频帧中时，标注者仍需要使用标签和标签框进行____。", answer: "标注", analysis: "仍需标注。" },
+        { id: 78, type: 'fill', q: "文本情绪识别技术只能用于分析正面和负面两种情绪。(判断正误)", answer: "错误", analysis: "可以识别多种复杂情绪。" },
+        { id: 79, type: 'fill', q: "标注结果评估的关键指标包括准确率、召回率和____分数。", answer: "F1", analysis: "F1 Score。" },
+        { id: 80, type: 'fill', q: "音频数据预处理步骤中不需要进行降噪处理。(判断正误)", answer: "错误", analysis: "必须降噪。" },
+        { id: 81, type: 'fill', q: "标注人员在标注音频数据时，需要具备____和耐心。", answer: "细心", analysis: "细心。" },
+        { id: 82, type: 'fill', q: "在视频数据标注中，当行人走出画面时，对应的标签框可以不再标注。(判断正误)", answer: "错误", analysis: "离开过程需处理，题库解析为错误。" },
+        { id: 83, type: 'fill', q: "中文语音识别技术在____、自动翻译、语音搜索等领域发挥着重要作用。", answer: "智能助手", analysis: "Smart Assistant。" },
+        { id: 84, type: 'fill', q: "文本情绪识别标注时，标注者可以忽略文本中的强烈语气词。(判断正误)", answer: "错误", analysis: "不能忽略。" },
+        { id: 85, type: 'fill', q: "标注质量对于训练机器学习模型的性能没有影响。(判断正误)", answer: "错误", analysis: "影响很大。" },
+        { id: 86, type: 'fill', q: "数据部署的最终目的是使用标注好的数据来____。", answer: "训练机器学习模型", analysis: "训练模型。" },
+        { id: 87, type: 'fill', q: "统计特征提取中，衡量数据集中趋势的统计量有均值、____和众数。", answer: "中位数", analysis: "Median。" },
+        { id: 88, type: 'fill', q: "句子重组要遵循____规则和逻辑关系。", answer: "语法", analysis: "语法。" },
+        { id: 89, type: 'fill', q: "同义词替换时要注意词语的____和语境。", answer: "感情色彩", analysis: "感情色彩。" },
+        { id: 90, type: 'fill', q: "在医学图像分析中，图像数据标注可以用于标注肿瘤的____。", answer: "区域", analysis: "Region。" },
+        { id: 91, type: 'fill', q: "在视频数据标注中，标注者可以通过“____”按钮来导出标注内容。", answer: "导出", analysis: "Export。" },
+        // --- 来自 "一.docx" 的新增填空题 ---
+        { id: 92, type: 'fill', q: "使用jieba库进行停用词过滤时，需要准备一个____文件来存放停用词。", answer: "停用词", analysis: "stop_words.txt。" },
+        { id: 93, type: 'fill', q: "音频特征提取中，表征声音高低的特征是____。", answer: "音高", analysis: "Pitch。" },
+        { id: 94, type: 'fill', q: "图像裁剪需要确定裁剪的____和位置。", answer: "尺寸", analysis: "Size/Dimension。" },
+        { id: 95, type: 'fill', q: "随着人工智能技术的飞速发展，数据成为了新时代的“____”。", answer: "燃料", analysis: "或“石油”。" },
+        { id: 96, type: 'fill', q: "在计算机视觉领域，图像数据标注广泛应用于图像分类、目标检测、图像分割等任务，其中图像分割涉及到对图像中每个像素的____标签进行标注。", answer: "类别", analysis: "Category。" },
+        { id: 97, type: 'fill', q: "数据标注工具Label Studio支持多种输出格式，包括____、CSV和XML。", answer: "JSON", analysis: "JSON格式。" },
+
+        // --- 第三部分：判断题 (98-123) ---
+        { id: 98, type: 'judge', q: "人工智能数据服务主要指的是为AI算法的训练、验证和优化提供高质量、结构化数据的专业服务。", answer: "T", analysis: "正确。" },
+        { id: 99, type: 'judge', q: "人工智能数据服务不包括数据的清洗和信息抽取环节。", answer: "F", analysis: "错误。" },
+        { id: 100, type: 'judge', q: "爬虫只能抓取网页中的文本数据，不能抓取图片或视频。", answer: "F", analysis: "错误。" },
+        { id: 101, type: 'judge', q: "端侧数据采集可以完全不依赖网络连接进行。", answer: "F", analysis: "错误。" },
+        { id: 102, type: 'judge', q: "图像数据标注主要应用于计算机视觉领域。", answer: "T", analysis: "正确。" },
+        { id: 103, type: 'judge', q: "停用词过滤会去除所有对文本分析没有意义的词。", answer: "F", analysis: "错误。" },
+        { id: 104, type: 'judge', q: "Excel格式数据存储的优点在于其强大的数据处理和分析能力。", answer: "T", analysis: "正确。" },
+        { id: 105, type: 'judge', q: "MongoDB提供了自动故障恢复和数据备份功能。", answer: "T", analysis: "正确。" },
+        { id: 106, type: 'judge', q: "文本情绪识别标注的应用场景只包括社交媒体分析。", answer: "F", analysis: "错误。" },
+        { id: 107, type: 'judge', q: "音频数据预处理步骤中不需要进行降噪处理。", answer: "F", analysis: "错误。" },
+        { id: 108, type: 'judge', q: "音频数据清洗和预处理对于提升语音识别系统的性能没有影响。", answer: "F", analysis: "错误。" },
+        { id: 109, type: 'judge', q: "目标跟踪标注中，关键点标注用于描述目标的形态、姿态或其他属性。", answer: "T", analysis: "正确。" },
+        { id: 110, type: 'judge', q: "视频数据标注任务中，标注者不需要考虑目标的属性信息。", answer: "F", analysis: "错误。" },
+        { id: 111, type: 'judge', q: "图像数据标注的应用场景不包括医学影像分析。", answer: "F", analysis: "错误。" },
+        { id: 112, type: 'judge', q: "句子重组一定会改变句子的意思。", answer: "F", analysis: "错误。" },
+        { id: 113, type: 'judge', q: "图像颜色变换一定会使图像变得更鲜艳。", answer: "F", analysis: "错误。" },
+        { id: 114, type: 'judge', q: "数据标注是将原始数据转化为结构化数据的过程。", answer: "T", analysis: "正确。" },
+        { id: 115, type: 'judge', q: "实体识别只能识别出人名、地名和组织机构名这三种实体。", answer: "F", analysis: "错误。" },
+        { id: 116, type: 'judge', q: "图像数据标注仅限于图像分类任务。", answer: "F", analysis: "错误。" },
+        { id: 117, type: 'judge', q: "国内人工智能基础数据服务市场的需求有望逐步向自然语言类采标需求转型。", answer: "T", analysis: "正确。" },
+        // --- 来自 "一.docx" 的新增判断题 ---
+        { id: 118, type: 'judge', q: "人工智能数据服务行业的早期阶段(2016年-2018年)主要以自然语言处理为核心业务。", answer: "F", analysis: "错误。早期主要以计算机视觉（图像/视频）和语音为核心。" },
+        { id: 119, type: 'judge', q: "无人驾驶技术主要依赖于高质量的语音数据。", answer: "F", analysis: "错误。主要依赖图像和激光雷达数据（计算机视觉）。" },
+        { id: 120, type: 'judge', q: "爬虫可以抓取到网站用户的个人信息和隐私数据。", answer: "T", analysis: "正确。技术上可以，但法律上必须合规。" },
+        { id: 121, type: 'judge', q: "爬虫在抓取数据前，需要了解并遵守目标网站的robots.txt协议。", answer: "T", analysis: "正确。" },
+        { id: 122, type: 'judge', q: "网络爬虫是一种用于从互联网上自动抓取数据的程序。", answer: "T", analysis: "正确。" },
+        { id: 123, type: 'judge', q: "同义词替换不会改变句子的原意。", answer: "F", analysis: "错误。可能改变语境或感情色彩，导致原意偏移。" },
+        { id: 124, type: 'judge', q: "图像数据标注不需要考虑标注者的专业知识和经验。", answer: "F", analysis: "错误。医疗、法律等领域需要高度专业知识。" },
+
+        // --- 第四部分：实操简答题 ---
+        { 
+            id: 125, type: 'code', 
+            q: "【项目一-爬虫】使用conda命令创建一个名为“Crawler_Name”的虚拟环境。安装requests库，编写Python脚本向www.baidu.com发送GET请求，并打印响应状态码及网页的前200个字符。", 
+            answer: `# 1. 创建并激活环境\nconda create -n Crawler_Name python=3.8\nconda activate Crawler_Name\n\n# 2. 安装库\npip install requests\n\n# 3. Python脚本\nimport requests\nurl = "https://www.baidu.com"\nresponse = requests.get(url)\nresponse.encoding = 'utf-8'\nprint(response.status_code)\nprint(response.text[:200])`
+        },
+        { 
+            id: 126, type: 'code', 
+            q: "【项目三-数据处理】使用opencv-python库，编写Python脚本，读取指定彩色图片，并转化为YCrCb色彩空间。", 
+            answer: `import cv2\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('test.jpg')\nimg_ycrcb = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)\nplt.imshow(img_ycrcb)\nplt.show()`
+        },
+        { 
+            id: 127, type: 'code', 
+            q: "【项目五-数据可视化】使用Matplotlib，利用折线图形式展示鸢尾花数据集中的四个特征。", 
+            answer: `import matplotlib.pyplot as plt\nimport pandas as pd\nfrom sklearn.datasets import load_iris\n\niris = load_iris()\ndf = pd.DataFrame(iris.data, columns=iris.feature_names)\ndf.plot()\nplt.show()`
+        },
+        { 
+            id: 128, type: 'code', 
+            q: "【项目五-数据可视化】使用Seaborn，绘制散点图，展示鸢尾花数据集中花萼长度与花瓣长度的对应关系，并按种类区分颜色。", 
+            answer: `import seaborn as sns\nimport matplotlib.pyplot as plt\nfrom sklearn.datasets import load_iris\nimport pandas as pd\n\niris = load_iris()\ndf = pd.DataFrame(iris.data, columns=iris.feature_names)\ndf['species'] = iris.target\nsns.scatterplot(data=df, x='sepal length (cm)', y='petal length (cm)', hue='species')\nplt.show()`
+        }
+    ];
+
+    // State
+    const userAnswers = {};
+    const answeredIds = new Set(); // Track questions that have been answered
+    let currentScore = 0;
+    let totalAnswered = 0;
+
+    // DOM Elements
+    const questionsContainer = document.getElementById('questions-container');
+    const navSingle = document.getElementById('nav-single');
+    const navFill = document.getElementById('nav-fill');
+    const navJudge = document.getElementById('nav-judge');
+    const navCode = document.getElementById('nav-code');
+    const countAnswered = document.getElementById('count-answered');
+    const countCorrect = document.getElementById('count-correct');
+
+    // Init
+    function init() {
+        renderQuestions();
+        renderNav();
+    }
+
+    function renderQuestions() {
+        questionsContainer.innerHTML = '';
+        allQuestions.forEach((q) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.id = `q-${q.id}`;
+            
+            // Header
+            let typeText = '未知';
+            if(q.type === 'single') typeText = '单选题';
+            else if(q.type === 'fill') typeText = '填空题';
+            else if(q.type === 'judge') typeText = '判断题';
+            else if(q.type === 'code') typeText = '实操简答题';
+
+            card.innerHTML = `
+                <div class="q-header">
+                    <span class="q-type">${typeText}</span>
+                    <span class="q-score">${q.type === 'code' ? '7.5' : '1.0'} 分</span>
+                </div>
+                <div class="q-text">${q.id}. ${q.q}</div>
+            `;
+
+            // Input Area
+            const inputArea = document.createElement('div');
+            
+            if (q.type === 'single' || q.type === 'judge') {
+                inputArea.className = 'options-list';
+                const options = q.type === 'single' ? q.options : [
+                    { val: 'T', text: '正确 (对)' },
+                    { val: 'F', text: '错误 (错)' }
+                ];
+
+                options.forEach(opt => {
+                    const val = q.type === 'single' ? opt : opt.val;
+                    const text = q.type === 'single' ? opt : opt.text;
+                    const label = document.createElement('label');
+                    label.className = 'option-item';
+                    label.id = `opt-${q.id}-${val}`;
+                    label.innerHTML = `
+                        <input type="radio" name="q${q.id}" value="${val}" onclick="checkAnswer(${q.id}, '${val}', '${q.type}')">
+                        <span>${text}</span>
+                    `;
+                    inputArea.appendChild(label);
+                });
+            } else if (q.type === 'fill') {
+                inputArea.innerHTML = `
+                    <div class="fill-wrapper">
+                        <input type="text" id="input-fill-${q.id}" class="fill-input" placeholder="输入答案...">
+                        <button class="btn-confirm" id="btn-fill-${q.id}" onclick="checkAnswer(${q.id}, 'fill', 'fill')">确认答案</button>
+                    </div>
+                `;
+            } else if (q.type === 'code') {
+                inputArea.innerHTML = `
+                    <textarea class="code-input" placeholder="编写思路..." oninput="markCodeRead(${q.id})"></textarea>
+                    <button class="btn-toggle-answer" onclick="toggleCodeAnswer(${q.id})">显示参考代码</button>
+                    <div id="code-ans-${q.id}" class="reference-answer-box">
+                        <strong>参考代码：</strong>
+                        <div class="code-block"><pre>${q.answer}</pre></div>
+                    </div>
+                `;
+            }
+            card.appendChild(inputArea);
+
+            // Analysis Box (for objective questions)
+            if (q.type !== 'code') {
+                const analysisBox = document.createElement('div');
+                analysisBox.className = 'analysis-box';
+                analysisBox.id = `analysis-${q.id}`;
+                analysisBox.innerHTML = `
+                    <div class="result-status" id="status-${q.id}"></div>
+                    <div><span style="color:#6b7280;">正确答案:</span> <span class="correct-answer-text">${q.answer}</span></div>
+                    <div class="analysis-content"><strong>解析：</strong>${q.analysis}</div>
+                `;
+                card.appendChild(analysisBox);
+            }
+
+            questionsContainer.appendChild(card);
+        });
+    }
+
+    function renderNav() {
+        navSingle.innerHTML = '';
+        navFill.innerHTML = '';
+        navJudge.innerHTML = '';
+        navCode.innerHTML = '';
+
+        allQuestions.forEach(q => {
+            const btn = document.createElement('div');
+            btn.className = 'nav-btn';
+            btn.textContent = q.id;
+            btn.id = `nav-${q.id}`;
+            btn.onclick = () => scrollToQuestion(q.id);
+
+            if (q.type === 'single') navSingle.appendChild(btn);
+            else if (q.type === 'fill') navFill.appendChild(btn);
+            else if (q.type === 'judge') navJudge.appendChild(btn);
+            else if (q.type === 'code') navCode.appendChild(btn);
+        });
+    }
+
+    // Core Logic: Immediate Check
+    window.checkAnswer = function(id, val, type) {
+        if (answeredIds.has(id)) return; // Prevent re-answering
+
+        let userVal = val;
+        
+        // Handle Fill Input specific retrieval
+        if (type === 'fill') {
+            const inputEl = document.getElementById(`input-fill-${id}`);
+            userVal = inputEl.value.trim();
+            if (!userVal) return alert("请输入答案后再确认");
+        }
+
+        answeredIds.add(id);
+        const q = allQuestions.find(i => i.id === id);
+        
+        // Determine correctness
+        let isCorrect = false;
+        if (type === 'fill') {
+            isCorrect = (userVal === q.answer);
+        } else {
+            isCorrect = (userVal === q.answer);
+        }
+
+        // --- Update UI ---
+        const card = document.getElementById(`q-${id}`);
+        const statusDiv = document.getElementById(`status-${id}`);
+        const navBtn = document.getElementById(`nav-${id}`);
+        
+        card.classList.add('view-mode');
+        card.classList.add('show-analysis');
+
+        if (isCorrect) {
+            currentScore++;
+            card.classList.add('correct-answer');
+            statusDiv.innerHTML = '<span class="status-correct">✅ 回答正确</span>';
+            navBtn.classList.add('correct');
+            
+            // Highlight correct option visually
+            if (type !== 'fill') {
+                document.getElementById(`opt-${id}-${val}`).classList.add('is-correct');
+            }
+        } else {
+            card.classList.add('wrong-answer');
+            statusDiv.innerHTML = '<span class="status-wrong">❌ 回答错误</span>';
+            navBtn.classList.add('wrong');
+
+            // Highlight chosen wrong option and indicate correct one
+            if (type !== 'fill') {
+                document.getElementById(`opt-${id}-${val}`).classList.add('is-wrong');
+                // Also highlight the actual correct one to learn
+                const correctOpt = document.getElementById(`opt-${id}-${q.answer}`);
+                if (correctOpt) correctOpt.classList.add('is-correct');
+            }
+        }
+
+        // Lock inputs
+        const inputs = card.querySelectorAll('input, button');
+        inputs.forEach(el => el.disabled = true);
+
+        // Update Score Board
+        totalAnswered++;
+        updateScoreBoard();
+    };
+
+    window.markCodeRead = function(id) {
+        if (!answeredIds.has(id)) {
+            answeredIds.add(id);
+            totalAnswered++;
+            document.getElementById(`nav-${id}`).classList.add('code-done');
+            updateScoreBoard();
+        }
+    };
+
+    window.toggleCodeAnswer = function(id) {
+        const box = document.getElementById(`code-ans-${id}`);
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+        markCodeRead(id); // Clicking show answer counts as "doing" the review
+    };
+
+    function updateScoreBoard() {
+        countAnswered.textContent = totalAnswered;
+        countCorrect.textContent = currentScore;
+    }
+
+    window.scrollToQuestion = function(id) {
+        document.getElementById(`q-${id}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    window.resetProgress = function() {
+        if(confirm("确定要清空所有进度重新复习吗？")) {
+            location.reload();
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>
