@@ -3,919 +3,551 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>人工智能复习题库 - 错题加强版</title>
+    <title>AI人工智能复习系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
     <style>
-        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; }
-        .code-block { font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em; }
-        .answer-panel { transition: all 0.3s ease-in-out; }
-        .hidden-panel { display: none; }
-        .nav-item.active { background-color: #2563eb; color: white; }
-        
-        /* 选项交互样式 */
-        .option-btn {
-            transition: all 0.2s;
-            border: 2px solid #e5e7eb;
-        }
-        .option-btn:hover:not(:disabled) {
-            border-color: #3b82f6;
-            background-color: #eff6ff;
-        }
-        .option-btn.correct {
-            background-color: #dcfce7 !important;
-            border-color: #22c55e !important;
-            color: #15803d !important;
-        }
-        .option-btn.wrong {
-            background-color: #fee2e2 !important;
-            border-color: #ef4444 !important;
-            color: #b91c1c !important;
-        }
-        .option-btn:disabled {
-            cursor: default;
-        }
-        
-        /* 错题本特殊样式 */
-        .mistake-mode .option-btn.wrong {
-            animation: shake 0.5s;
-        }
-        @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
+        .nav-item.active { background-color: #3b82f6; color: white; }
+        .option-btn { transition: all 0.2s; }
+        .option-btn:hover { transform: translateX(4px); }
+        .option-btn.selected { background-color: #dbeafe; border-color: #3b82f6; }
+        .option-btn.correct { background-color: #dcfce7 !important; border-color: #22c55e !important; }
+        .option-btn.wrong { background-color: #fee2e2 !important; border-color: #ef4444 !important; }
+        .fade-out { animation: fadeOut 0.5s ease-out forwards; }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(100px); } }
+        .sidebar { transition: transform 0.3s ease; }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); position: fixed; z-index: 50; height: 100vh; }
+            .sidebar.open { transform: translateX(0); }
         }
     </style>
 </head>
-<body class="h-screen flex flex-col md:flex-row overflow-hidden">
-
-    <!-- Sidebar Navigation -->
-    <aside class="w-full md:w-64 bg-white shadow-md flex-shrink-0 overflow-y-auto z-10 flex flex-col">
-        <div class="p-6 border-b">
-            <h1 class="text-xl font-bold text-gray-800">🤖 AI复习题库</h1>
-            <p class="text-xs text-gray-500 mt-1">错题攻克版 · 直到不再错为止</p>
-        </div>
-        <nav class="p-4 space-y-2 flex-1">
-            <button onclick="filterCategory('all')" class="nav-item active w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm flex justify-between items-center">
-                <span>📚 全部题目</span>
-                <span id="count-all" class="text-xs opacity-75 bg-gray-200 px-2 py-0.5 rounded-full">0</span>
-            </button>
-            <button onclick="filterCategory('mistakes')" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm flex justify-between items-center text-red-600">
-                <span>❌ 错题本 (重做)</span>
-                <span id="count-mistakes" class="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">0</span>
-            </button>
-            <div class="h-px bg-gray-200 my-2"></div>
-            <button onclick="filterCategory('program')" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm flex justify-between items-center">
-                <span>💻 程序填空题</span>
-                <span id="count-program" class="text-xs opacity-75 bg-gray-200 px-2 py-0.5 rounded-full">0</span>
-            </button>
-            <button onclick="filterCategory('single')" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm flex justify-between items-center">
-                <span>✅ 单选题</span>
-                <span id="count-single" class="text-xs opacity-75 bg-gray-200 px-2 py-0.5 rounded-full">0</span>
-            </button>
-            <button onclick="filterCategory('multi')" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm flex justify-between items-center">
-                <span>☑️ 多选题</span>
-                <span id="count-multi" class="text-xs opacity-75 bg-gray-200 px-2 py-0.5 rounded-full">0</span>
-            </button>
-            <button onclick="filterCategory('judge')" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm flex justify-between items-center">
-                <span>⚖️ 判断题</span>
-                <span id="count-judge" class="text-xs opacity-75 bg-gray-200 px-2 py-0.5 rounded-full">0</span>
-            </button>
-        </nav>
-        <div class="p-4 border-t bg-gray-50">
-            <div class="text-xs text-gray-500 mb-2">总答题进度</div>
-            <div class="w-full bg-gray-200 rounded-full h-2.5">
-                <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
-            </div>
-            <p id="progressText" class="text-xs text-right mt-1 text-gray-400">0/0</p>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-gray-50">
-        <!-- Header -->
-        <header class="bg-white shadow-sm p-4 flex items-center justify-between z-10">
-            <div class="flex items-center w-full max-w-2xl bg-gray-100 rounded-lg px-4 py-2">
-                <svg class="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <input type="text" id="searchInput" placeholder="搜索题目（如：卷积、过拟合...）" class="bg-transparent border-none outline-none w-full text-gray-700 placeholder-gray-400" onkeyup="searchQuestions()">
-            </div>
-            <div class="ml-4 flex items-center space-x-2">
-                <button onclick="resetAll()" class="text-sm text-red-500 hover:text-red-700 font-medium px-3 py-1 hover:bg-red-50 rounded">重置所有进度</button>
-            </div>
-        </header>
-
-        <!-- Questions List -->
-        <div id="questionsContainer" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 pb-20 scroll-smooth">
-            <!-- Content will be injected by JS -->
-        </div>
-    </main>
-
-    <!-- Data & Script -->
-    <script>
-        // ================= 数据源 =================
-        const questions = [
-            // --- 程序题 ---
-            {
-                id: 1, category: "program", type: "程序填空题", title: "Numpy 与 Matplotlib 绘图基础",
-                content: `import numpy as np\nimport matplotlib.pyplot as plt\n# 创建0-10的x轴数据\nx = np.    ①     (10)\nprint(x)\ny1 = x + 0.5\ny2 =  ②  \ny3 = np.log(x + 1)\n\n# 生成红色的虚线形状是X线\nplt.plot(x, y1,"   ③  " )\n# 生成绿色的点线形状是*号\nplt.plot(x, y2, "  ④     ")\n# 生成蓝色的点线形状是上三角号\nplt.plot(x, y3, " ⑤  ")\n\nplt.show()`,
-                answer: `① arange\n② x * x (或 x**2)\n③ r--\n④ g:*\n⑤ b^:`,
-                explanation: "1. `np.arange(10)` 生成0-9的数组。\n2. 题目注释提到抛物线，故为平方。\n3. Matplotlib 格式字符串：颜色+线型+标记。"
-            },
-            {
-                id: 2, category: "program", type: "程序填空题", title: "遍历文件夹与图像处理",
-                content: `import os\nimport cv2\ninput_path = "./imgs"\n# 搜索文件夹下面的图片\nfor root, dirs, files in    ①  (input_path, topdown=False):\n   for name in files:\n       print(os.path.join(root, name))\n       # 实现路径与文件名称的组合功能\n       cur_img_path =   ②   (root, name)\n       # 读取图片\n       img = cv2.  ③ (cur_img_path)\n       if img is None:\n           print("无法读取图片")\n       else:\n           size = (500, 500)\n           # 将图像进行缩放到大小500\n           scale_img = cv2.  ④    (img, size, interpolation=cv2.INTER_AREA)\n           # 显示图片\n           cv2.  ⑤ ("hello_win", scale_img)\n           cv2.waitKey(1000)`,
-                answer: `① os.walk\n② os.path.join\n③ imread\n④ resize\n⑤ imshow`,
-                explanation: "考察 Python `os` 模块的文件遍历以及 OpenCV 的基本读写、缩放操作。"
-            },
-            {
-                id: 3, category: "program", type: "程序填空题", title: "Matplotlib 子图绘制",
-                content: `plt.   ①     (221)\nplt.plot(x, y1, "k") \n\nplt.   ①     (222)\nplt.plot(x, y2, "rs")\n\n# 这是第二个子图，给出位置坐标（应为第三个）\nplt.   ①     (  ②  )\nplt.plot(x, y3, " ③ ") # 绿色的虚线，形状为上三角\n\nplt.   ①     (224)\nplt.plot(x, y4, " ④  ") # 蓝色的实线，形状为圆点\n\n# 显示图像\nplt.  ⑤ ()`,
-                answer: `① subplot\n② 223\n③ g^--\n④ bo-\n⑤ show`,
-                explanation: "1. `subplot` 用于创建子图。\n2. `223` 表示2行2列第3个。\n3. 颜色字符：g(绿), b(蓝); 标记：^(三角), o(圆点)。"
-            },
-             {
-                id: 4, category: "program", type: "程序填空题", title: "Pandas 数据框操作",
-                content: `import numpy as np\nimport pandas as pd\ndata = np.arange(1, 16, 1)\ndata =    ①      # 5行3列的数据\nindex_name = ['参数1','参数2','参数3','参数4','参数5']\ndf = pd.DataFrame(index=  ②    , columns=['Mango','Apple','Banana'], data=  ③    )\nprint(df)\nprint(   ④       ) # 打印Banana这一列数据\nprint(     ⑤          ) # 打印参数3这一行的数据`,
-                answer: `① data.reshape(5, 3)\n② index_name\n③ data\n④ df['Banana']\n⑤ df.loc['参数3']`,
-                explanation: "考察 Numpy 的 `reshape` 和 Pandas DataFrame 的行列索引 (`loc`) 操作。"
-            },
-            {
-                id: 5, category: "program", type: "程序填空题", title: "OpenCV 人脸检测",
-                content: `faces =    ①       .detectMultiScale(img, 1.3, 5)\nfor x, y, w, h in faces:\n    # 截取人脸部分\n    roi =    ②             \n    cv2.imshow('roi',  ③   ) \n    # 写入目标路径\n    cv2.imwrite(   ④       , roi)\n    k = cv2.waitKey(1000)\n    if k ==   ⑤    : # 按q键退出\n        break`,
-                answer: `① face_clf\n② img[y:y+h, x:x+w]\n③ roi\n④ path_small_sub\n⑤ ord('q')`,
-                explanation: "1. 使用分类器对象 `face_clf`。\n2. 图像切片是 `[y:y+h, x:x+w]`。\n3. `ord('q')` 获取按键ASCII码。"
-            },
-            {
-                id: 6, category: "program", type: "程序填空题", title: "Keras CIFAR-10 数据处理",
-                content: `(train_image, train_label), (test_image, test_label) = cifar10.load_data()\n# ...归一化...\n# 进行onehot处理\nTrain_label_nor = np_utils.    ①      (train_label) \nTest_label_nor = np_utils.to_categorical(   ②   ) \n\n# 模型加载\nmodel =     ③ \n# 模型评估\nscores = model.evaluate(    ④      ,    ⑤        ) \nprint(scores)`,
-                answer: `① to_categorical\n② test_label\n③ load_model('cnn_cifar10.h5')\n④ Test_image_nor\n⑤ Test_label_nor`,
-                explanation: "考察 Keras 的 `to_categorical`，以及模型加载 `load_model` 和评估 `evaluate`。"
-            },
-            {
-                id: 7, category: "program", type: "程序填空题", title: "Anaconda 环境管理",
-                content: `1. 安装软件包numpy命令(3个单词):        ①             \n2. Anaconda 列出当前环境的库(2个单词):   ②       \n3. 激活环境py36(2个单词):   ③       \n4. 创建新的conda环境py36 (1个单词): conda   ④         -n myenv python=3.8\n5. 使用清华源安装tensorflow (包名): pip install       ⑤    -i https://pypi.tuna.tsinghua.edu.cn/simple`,
-                answer: `① conda install numpy\n② conda list\n③ conda activate\n④ create\n⑤ tensorflow==1.1.14`,
-                explanation: "基础的 Conda 环境管理命令。"
-            },
-            {
-                id: 8, category: "program", type: "程序填空题", title: "Keras 线性回归",
-                content: `model = keras.Sequential()\nmodel.add(layers.Dense(  ①    , input_dim=1)) \n# ...\n# 训练模型\nmodel.fit(x, y,    ②       ) # 训练 30000遍\n# 预测\nmodel.   ③       \nplt.plot(x, model.predict(x),  ④        ) # 绘制预测y2\n# 显示图例\nplt. ⑤`,
-                answer: `① 1\n② epochs=30000\n③ predict(x)\n④ 'b-'\n⑤ legend()`,
-                explanation: "线性回归输出层为1个神经元。`epochs`控制训练轮数。"
-            },
-            {
-                id: 9, category: "program", type: "程序填空题", title: "MNIST 深度神经网络",
-                content: `(x_train_image, y_train_label), (x_test_image, y_test_label) = _______①________.load_data()\nmodel = _______②______________\nmodel.compile(______③_______________='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])\nscores = model.evaluate(x_Test_normalize,    ④   )\nprediction = model._____⑤____________________(x_Test)`,
-                answer: `① mnist\n② Sequential()\n③ loss\n④ y_Test_OneHot\n⑤ predict_classes (或 predict)`,
-                explanation: "标准的 Keras MNIST 流程。"
-            },
-            {
-                id: 10, category: "program", type: "程序填空题", title: "图像搜索与展示",
-                content: `for root, dirs, files in      ①     (input_path, topdown=False):\n   cur_img_path =      ②     (root, name)\n   img = cv2.     ③(cur_img_path)\n   img = cv2.     ④     (img, size, interpolation=cv2.INTER_AREA)\n   cv2.     ⑤     ("win", img)`,
-                answer: `① os.walk\n② os.path.join\n③ imread\n④ resize\n⑤ imshow`,
-                explanation: "与题目2类似，考察文件操作和OpenCV基础。"
-            },
-             {
-                id: 11, category: "program", type: "程序填空题", title: "数据集生成与预处理",
-                content: `fp = open(“1.txt”, "   ①     ", encoding="utf-8") # 写入模式\n# ...\nlabel =     ②                 # 调用函数计算标签\nfp.   ③       ("{0} {1} {2} {3}\\n".format(x1, x2, x3, label))\n# ...\nreturn train_data,    ④         \ndata = data /   ⑤`,
-                answer: `① "w"\n② calc_label(x1, x2, x3)\n③ write\n④ train_labels\n⑤ 100`,
-                explanation: "文件写入模式为'w'。归一化通常除以最大值（100分）。"
-            },
-            {
-                id: 12, category: "program", type: "程序填空题", title: "MNIST 卷积神经网络 (CNN)",
-                content: `(x_Train, y_Train) , (x_Test, y_Test) =    ①     .load_data()\nmodel =      ②          \nmodel.add(Conv2D(filters=16, ...))\n# ...\nmodel.   ③       (loss='categorical_crossentropy', ...)\ntrain_history = model.   ④      (x = x_Train4D_normalize, y = y_TrainHot, ...)\nmodel.   ⑤      ("SaveModel/minist_model_graphic.h5")`,
-                answer: `① mnist\n② Sequential()\n③ compile\n④ fit\n⑤ save`,
-                explanation: "Keras CNN 模型的构建（Sequential）、编译（compile）、训练（fit）和保存（save）。"
-            },
-             {
-                id: 13, category: "program", type: "程序填空题", title: "Matplotlib 绘制多图形",
-                content: `plt.plot(x, y1, "   ①   ",linewidth = 1) # 虚线\nplt.plot(x, y2, "    ②   ",linewidth = 1) # 方块\nplt.plot(x, y3, "   ③     ",linewidth = 5) # 星形\nplt.plot(x, y4, "  ④   ",linewidth = 5) # 三角形\nplt.    ⑤    ()`,
-                answer: `① -- (或 k--)\n② s (或 rs)\n③ *\n④ ^\n⑤ show`,
-                explanation: "Matplotlib 标记：s(square), *(star), ^(triangle_up)。"
-            },
-            {
-                id: 14, category: "program", type: "程序填空题", title: "Dlib 人脸特征提取",
-                content: `detector =      ①      .get_frontal_face_detector()\ncamera = cv2.      ②          (0)\n# ...\ngray_img = cv2.     ③    (img, cv2.COLOR_BGR2GRAY)\n# ...\ncv2.     ④    ('image', face)\nkey = cv2.      ⑤     (30) & 0xff`,
-                answer: `① dlib\n② VideoCapture\n③ cvtColor\n④ imshow\n⑤ waitKey`,
-                explanation: "1. `dlib` 库。\n2. `VideoCapture` 打开摄像头。\n3. `cvtColor` 转换颜色空间。"
-            },
-            {
-                id: 15, category: "program", type: "程序填空题", title: "CNN 人脸识别模型构建",
-                content: `from keras.layers import _________①_______, MaxPooling2D\nfrom keras.optimizers import ______________②________________\n# ...\nmodel.add(______________③____________________) # 展平层\nprint(model.___________④__________________) # 输出概况\n# ...\nmodel.compile(..., ________⑤_________=['accuracy'])`,
-                answer: `① Convolution2D (或 Conv2D)\n② SGD\n③ Flatten()\n④ summary()\n⑤ metrics`,
-                explanation: "1. 卷积层类名。\n2. SGD优化器。\n3. `Flatten`用于将多维特征展平连接全连接层。"
-            },
-
-            // --- 单选题 (交互式) ---
-            {
-                id: 101, category: "single", type: "单选题", title: "机器学习算法",
-                content: "1. 下面不属于机器学习算法的是？",
-                options: ["A. 线性回归", "B. 三维回归", "C. 支持向量机 SVM", "D. 决策树"],
-                correctIndex: 1, // B
-                explanation: "三维回归不是一种标准的机器学习算法名称，通常指多变量回归，但在此选项中作为干扰项。"
-            },
-            {
-                id: 102, category: "single", type: "单选题", title: "深度学习关系",
-                content: "2. 深度学习(deep learning)是()的分支？",
-                options: ["A. 机器学习", "B. 语音识别", "C. 图像识别", "D. 医疗影像"],
-                correctIndex: 0, // A
-                explanation: "人工智能 > 机器学习 > 深度学习。"
-            },
-            {
-                id: 103, category: "single", type: "单选题", title: "网络类型",
-                content: "3. 下列不属于深度学习网络的是？",
-                options: ["A. 深度神经网络", "B. 卷积神经网络", "C. 机器学习"],
-                correctIndex: 2, // C
-                explanation: "机器学习是包含深度学习的大类，不是具体的网络结构。"
-            },
-            {
-                id: 104, category: "single", type: "单选题", title: "图像识别网络",
-                content: "4. 图像识别一般采用什么网络？",
-                options: ["A. 深度神经网络", "B. 卷积神经网络", "C. 循环神经网络"],
-                correctIndex: 1, // B
-                explanation: "CNN (卷积神经网络) 最适合处理图像数据。"
-            },
-            {
-                id: 105, category: "single", type: "单选题", title: "语音领域网络",
-                content: "5. 语音领域一般采用什么网络？",
-                options: ["A. 深度神经网络", "B. 卷积神经网络", "C. 循环神经网络"],
-                correctIndex: 2, // C
-                explanation: "RNN (循环神经网络) 及其变体 LSTM/GRU 适合处理序列数据如语音。"
-            },
-            {
-                id: 106, category: "single", type: "单选题", title: "激活函数",
-                content: "6. 以下关于激活函数描述正确的是？",
-                options: ["A. 表示样本和预测之间的偏差程度", "B. 是非线性函数", "C. 是线性函数"],
-                correctIndex: 1, // B
-                explanation: "激活函数的目的是引入非线性因素，使神经网络能拟合复杂函数。"
-            },
-            {
-                id: 107, category: "single", type: "单选题", title: "损失函数",
-                content: "7. 以下关于损失函数描述正确的是？",
-                options: ["A. 一定是一个线性函数", "B. 一定是一个非线性函数", "C. 表示样本和预测之间的偏差程度"],
-                correctIndex: 2, // C
-                explanation: "损失函数（Loss Function）用来衡量模型预测值与真实值之间的差异。"
-            },
-            {
-                id: 108, category: "single", type: "单选题", title: "非常见激活函数",
-                content: "8. 以下哪个函数不是常见的激活函数？",
-                options: ["A. sigmoid", "B. relu", "C. categorical_crossentropy"],
-                correctIndex: 2, // C
-                explanation: "categorical_crossentropy 是损失函数，不是激活函数。"
-            },
-            {
-                id: 109, category: "single", type: "单选题", title: "池化",
-                content: "9. 以下关于池化的表述正确的是？",
-                options: ["A. 池化的主要作用是用来升维", "B. 目标图像比原始图像像素相同", "C. 目标像素的大小主要取决于滤波器窗口的大小和移动步子的大小"],
-                correctIndex: 2, // C
-                explanation: "池化（Pooling）用于降维，输出大小取决于窗口大小和步长。"
-            },
-            {
-                id: 110, category: "single", type: "单选题", title: "CIFAR-10",
-                content: "10. 关于CIFAR-10数据集描述正确的是？",
-                options: ["A. 共60000张32*32的RGB图像", "B. 测试集共10000张，用于训练", "C. 训练集共50000张，用于测试"],
-                correctIndex: 0, // A
-                explanation: "CIFAR-10包含60000张32x32彩色图像，其中50000张训练，10000张测试。"
-            },
-            {
-                id: 111, category: "single", type: "单选题", title: "非线性引入",
-                content: "11. 下列哪一项在神经网络中引入了非线性？",
-                options: ["A. 随机梯度下降", "B. 修正线性单元(ReLU)", "C. 卷积函数", "D. 以上都不正确"],
-                correctIndex: 1, // B
-                explanation: "ReLU 是激活函数，引入非线性。"
-            },
-            {
-                id: 112, category: "single", type: "单选题", title: "梯度下降步骤",
-                content: "12. 梯度下降算法的正确步骤是什么？\na. 计算误差\nb. 重复迭代\nc. 传入输入得到输出\nd. 初始化权重\ne. 调整权重",
-                options: ["A. abcde", "B. edcba", "C. chaed", "D. dcaeb"],
-                correctIndex: 3, // D
-                explanation: "初始化(d) -> 前向传播(c) -> 计算误差(a) -> 反向传播调整权重(e) -> 迭代(b)。"
-            },
-            {
-                id: 113, category: "single", type: "单选题", title: "深度学习定义",
-                content: "13. 什么情况下神经网络模型被称为深度学习模型？",
-                options: ["A. 加入更多层，使神经网络的深度增加", "B. 有维度更高的数据", "C. 图形识别问题"],
-                correctIndex: 0, // A
-                explanation: "“深度”指神经网络的层数较多。"
-            },
-            {
-                id: 114, category: "single", type: "单选题", title: "DNN简称",
-                content: "14. 深度神经网络英文简称为？",
-                options: ["A. DNN", "B. CNN", "C. RNN", "D. LSTM"],
-                correctIndex: 0, // A
-                explanation: "Deep Neural Network."
-            },
-            {
-                id: 115, category: "single", type: "单选题", title: "CNN简称",
-                content: "15. 卷积神经网络的英文简写为？",
-                options: ["A. DNN", "B. CNN", "C. RNN", "D. LSTM"],
-                correctIndex: 1, // B
-                explanation: "Convolutional Neural Network."
-            },
-            {
-                id: 116, category: "single", type: "单选题", title: "RNN简称",
-                content: "16. 循环神经网络的英文简写为？",
-                options: ["A. DNN", "B. CNN", "C. RNN", "D. LSTM"],
-                correctIndex: 2, // C
-                explanation: "Recurrent Neural Network."
-            },
-            {
-                id: 117, category: "single", type: "单选题", title: "权重获取",
-                content: "18. 怎么获知每个神经元的权重和偏移？",
-                options: ["A. 搜索所有组合", "B. 赋予初始值，检查差值，不断迭代调整", "C. 随机赋值听天由命"],
-                correctIndex: 1, // B
-                explanation: "这是训练过程（反向传播+梯度下降）的本质。"
-            },
-            {
-                id: 118, category: "single", type: "单选题", title: "过拟合现象",
-                content: "19. 卷积核数量增加导致精确度先升后降，可能原因？",
-                options: ["A. 只有少部分起作用", "B. 导致过拟合", "C. 预测能力降低"],
-                correctIndex: 1, // B
-                explanation: "模型太复杂（参数太多）容易导致过拟合。"
-            },
-            {
-                id: 119, category: "single", type: "单选题", title: "感知机顺序",
-                content: "20. 感知机任务顺序？\n1.初始化 2.下一批数据 3.调整权重 4.计算输出",
-                options: ["A. 1,2,3,4", "B. 4,3,2,1", "C. 1,4,3,2", "D. 3,1,2,4"],
-                correctIndex: 2, // C
-                explanation: "初始化 -> 计算输出 -> 调整权重 -> 下一批。"
-            },
-            {
-                id: 120, category: "single", type: "单选题", title: "非激活函数",
-                content: "21. 下列哪个函数不可以做激活函数？",
-                options: ["A. y=tanh(x)", "B. y=sin(x)", "C. y=max(x,0)", "D. y=2x"],
-                correctIndex: 3, // D
-                explanation: "y=2x 是线性函数，无法引入非线性。"
-            },
-            {
-                id: 121, category: "single", type: "单选题", title: "学习率过大",
-                content: "22. 学习率太大会导致？",
-                options: ["A. 收敛", "B. 无法收敛", "C. 收敛慢"],
-                correctIndex: 1, // B
-                explanation: "学习率过大会导致在极小值附近震荡甚至发散。"
-            },
-            {
-                id: 122, category: "single", type: "单选题", title: "过拟合表现",
-                content: "23. 以下现象属于过拟合的是？",
-                options: ["A. 训练Loss降，验证Loss不变", "B. 训练Loss降，验证Loss升", "C. 训练Loss升，验证Loss升"],
-                correctIndex: 1, // B
-                explanation: "训练集表现好，验证集表现变差，是典型的过拟合。"
-            },
-            {
-                id: 123, category: "single", type: "单选题", title: "欠拟合表现",
-                content: "24. 关于欠拟合，说法正确的是？",
-                options: ["A. 训练误差大，测试误差小", "B. 训练误差小，测试误差大", "C. 训练误差大，测试误差大"],
-                correctIndex: 2, // C
-                explanation: "模型没学好，两边误差都大。"
-            },
-            {
-                id: 124, category: "single", type: "单选题", title: "算力单位",
-                content: "25. 算力单位1T (TOPS) 指每秒运算多少次？",
-                options: ["A. 10^12", "B. 10^6", "C. 10^9"],
-                correctIndex: 0, // A
-                explanation: "Tera = 10^12。"
-            },
-            {
-                id: 125, category: "single", type: "单选题", title: "灰度图存储",
-                content: "38. 分辨率200*300的灰度图像存储量？",
-                options: ["A. 60KBytes", "B. 7.5Kbytes", "C. 120Kbytes", "D. 60KBytes"],
-                correctIndex: 3, // D
-                explanation: "200 * 300 * 1 Byte = 60000 Bytes = 60KB。"
-            },
-             {
-                id: 126, category: "single", type: "单选题", title: "OpenCV检测参数",
-                content: "39. face_date.detectMultiScale参数minNeighbors描述错误的是？",
-                options: ["A. image待检测图像", "B. scaleFactor比例系数", "C. minNeighbors相邻矩形最小个数", "D. minNeighbors设置越大，检测到人脸可能性越小"],
-                correctIndex: 3, // D
-                explanation: "题目原意D为错误描述（反向逻辑），minNeighbors越大，检测越严苛，召回率越低。"
-            },
-
-             // --- 多选题 (交互式) ---
-             {
-                id: 201, category: "multi", type: "多选题", title: "机器学习联系领域",
-                content: "78. 机器学习跟下面哪些领域有很深联系？",
-                options: ["A. 模式识别", "B. 统计学习", "C. 数据挖掘", "D. 计算机视觉"],
-                correctIndex: [0, 1, 2, 3], // ABCD
-                explanation: "机器学习是这些领域的核心方法。"
-            },
-            {
-                id: 202, category: "multi", type: "多选题", title: "深度学习应用",
-                content: "79. 深度学习主要应用领域？",
-                options: ["A. 人脸识别", "B. 文字识别", "C. 图像识别", "D. 语音及理解"],
-                correctIndex: [0, 1, 2, 3], // ABCD
-                explanation: "涵盖了CV和NLP的主要方向。"
-            },
-            {
-                id: 203, category: "multi", type: "多选题", title: "经典算法应用",
-                content: "80. 深度学习经典算法主要应用在？",
-                options: ["A. 计算机视觉", "B. 自然语言处理", "C. 强化学习", "D. 比特币"],
-                correctIndex: [0, 1, 2], // ABC
-                explanation: "比特币属于区块链技术。"
-            },
-            {
-                id: 204, category: "multi", type: "多选题", title: "避免过拟合",
-                content: "83. 避免过拟合的方法？",
-                options: ["A. 数据增强", "B. 增加训练次数", "C. 增加网络深度", "D. 正则化"],
-                correctIndex: [0, 3], // AD
-                explanation: "增加训练次数和深度通常会导致过拟合。数据增强和正则化（如Dropout/L2）用于抑制过拟合。"
-            },
-             {
-                id: 205, category: "multi", type: "多选题", title: "卷积层特点",
-                content: "86. 卷积层具有哪些特点？",
-                options: ["A. 稀疏交互", "B. 参数共享", "C. 等变表示", "D. 稠密交互"],
-                correctIndex: [0, 1, 2], // ABC
-                explanation: "卷积层核心特性：局部连接（稀疏交互）、权值共享（参数共享）、平移等变。"
-            },
-            {
-                id: 206, category: "multi", type: "多选题", title: "CNN vs DNN",
-                content: "89. 相对DNN，CNN做了哪些改变？",
-                options: ["A. 局部连接", "B. 使用relu", "C. 参数共享", "D. 增加batch normalization"],
-                correctIndex: [0, 2], // AC
-                explanation: "局部连接和参数共享是CNN区别于全连接网络的主要特征。"
-            },
-            {
-                id: 207, category: "multi", type: "多选题", title: "人工智能三要素",
-                content: "91. 人工智能三要素包括？",
-                options: ["A. 算法", "B. 机器人", "C. 算力", "D. 大数据"],
-                correctIndex: [0, 2, 3], // ACD
-                explanation: "算法、算力、数据。"
-            },
-
-            // --- 判断题 (交互式) ---
-            {
-                id: 301, category: "judge", type: "判断题", title: "卷积目的",
-                content: "127. 卷积计算的目的是提取输入的不同特征？",
-                options: ["正确", "错误"],
-                correctIndex: 0, // 正确
-                explanation: "卷积核通过滑动窗口提取局部特征。"
-            },
-            {
-                id: 302, category: "judge", type: "判断题", title: "数据增强",
-                content: "128. 训练CNN时，可以对输入进行旋转、平移等预处理提高泛化能力？",
-                options: ["正确", "错误"],
-                correctIndex: 0, // 正确
-                explanation: "这是数据增强的标准操作。"
-            },
-            {
-                id: 303, category: "judge", type: "判断题", title: "Dropout",
-                content: "129. 暂时丢弃神经元的方法叫Dropout？",
-                options: ["正确", "错误"],
-                correctIndex: 0, // 正确
-                explanation: "防止过拟合的技术。"
-            },
-            {
-                id: 304, category: "judge", type: "判断题", title: "池化层",
-                content: "130. 池化层可以减少参数数量？",
-                options: ["正确", "错误"],
-                correctIndex: 0, // 正确
-                explanation: "通过降维减少后续层参数。"
-            },
-            {
-                id: 305, category: "judge", type: "判断题", title: "风格迁移",
-                content: "135. 风格迁移一般是画家画出来，不能计算机自动实现？",
-                options: ["正确", "错误"],
-                correctIndex: 1, // 错误
-                explanation: "深度学习（如Style Transfer）可以自动实现。"
-            },
-            {
-                id: 306, category: "judge", type: "判断题", title: "多层感知机误差",
-                content: "138. 增加MLP隐藏层层数，分类误差便会减小？",
-                options: ["正确", "错误"],
-                correctIndex: 1, // 错误
-                explanation: "层数过多可能导致过拟合或梯度消失，误差不一定减小，甚至可能变大。"
-            },
-            {
-                id: 307, category: "judge", type: "判断题", title: "K-Means分类",
-                content: "143. K-Means是最流行的分类方法？",
-                options: ["正确", "错误"],
-                correctIndex: 1, // 错误
-                explanation: "K-Means是**聚类**（无监督）方法，不是分类（监督）方法。"
-            },
-            {
-                id: 308, category: "judge", type: "判断题", title: "可见光",
-                content: "148. 计算机视觉也像人类一样，只能处理可见光范围的信息？",
-                options: ["正确", "错误"],
-                correctIndex: 1, // 错误
-                explanation: "CV还可以处理红外、X光、深度图等非可见光信息。"
-            },
-            {
-                id: 309, category: "judge", type: "判断题", title: "卷积核大小",
-                content: "161. 增大卷积核的大小必然会提高CNN性能？",
-                options: ["正确", "错误"],
-                correctIndex: 1, // 错误
-                explanation: "卷积核过大会增加参数量且丢失局部细节，需适中选择（如3x3）。"
-            }
-        ];
-
-        // ================= 逻辑控制 =================
-
-        let currentCategory = 'all';
-        // 存储用户答题状态 { questionId: { isAnswered: boolean, isCorrect: boolean, selectedIndices: number[] } }
-        let userProgress = {};
-
-        function init() {
-            // 加载进度
-            const saved = localStorage.getItem('ai_quiz_progress_v2');
-            if (saved) {
-                userProgress = JSON.parse(saved);
-            }
-            updateCounts();
-            renderQuestions(questions);
-            hljs.highlightAll();
-        }
-
-        function updateCounts() {
-            const categories = ['program', 'single', 'multi', 'judge'];
-            let total = questions.length;
-            document.getElementById('count-all').innerText = total;
-
-            categories.forEach(cat => {
-                const count = questions.filter(q => q.category === cat).length;
-                document.getElementById(`count-${cat}`).innerText = count;
-            });
-
-            // 计算错题数量
-            const mistakeCount = Object.values(userProgress).filter(p => p.isAnswered && !p.isCorrect).length;
-            document.getElementById('count-mistakes').innerText = mistakeCount;
-
-            // 更新进度条
-            const answeredCount = Object.keys(userProgress).length;
-            const percentage = Math.round((answeredCount / total) * 100);
-            document.getElementById('progressBar').style.width = `${percentage}%`;
-            document.getElementById('progressText').innerText = `${answeredCount}/${total}`;
-        }
-
-        function filterCategory(cat) {
-            currentCategory = cat;
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            
-            // 筛选逻辑
-            let filtered = [];
-            if (cat === 'all') {
-                filtered = questions;
-            } else if (cat === 'mistakes') {
-                // 筛选出错题（已回答且错误）
-                filtered = questions.filter(q => userProgress[q.id] && userProgress[q.id].isAnswered && !userProgress[q.id].isCorrect);
-            } else {
-                filtered = questions.filter(q => q.category === cat);
-            }
-            
-            renderQuestions(filtered);
-            document.getElementById('searchInput').value = '';
-        }
-
-        function searchQuestions() {
-            const term = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = questions.filter(q => 
-                q.title.toLowerCase().includes(term) || 
-                q.content.toLowerCase().includes(term) ||
-                (q.type && q.type.toLowerCase().includes(term))
-            );
-            renderQuestions(filtered);
-        }
-
-        function retryQuestion(qId) {
-            // 删除该题的进度记录
-            if (userProgress[qId]) {
-                delete userProgress[qId];
-                saveProgress();
-                
-                // 刷新界面
-                // 如果当前在“错题本”视图，该题应该消失或重新渲染为未做状态
-                // 这里的逻辑是重新渲染当前视图
-                if (currentCategory === 'mistakes') {
-                    // 在错题本中点击重做，通常希望它留在列表里变成未做状态，或者移出列表？
-                    // 按照通常逻辑，重做意味着要再答一次，所以我们刷新该卡片即可。
-                    // 但由于filterCategory('mistakes')只显示错题，删除了记录就不算错题了。
-                    // 为了让用户能立刻重做，我们可以暂时不刷新整个列表，只刷新单个卡片状态
-                    // 或者更简单的：刷新列表，它会消失。用户需要去“全部题目”或者原分类里找。
-                    // 改进：为了体验更好，重做时不要立刻消失，而是变成可编辑状态，直到答对才消失。
-                    // 但由于数据逻辑限制，我们还是让它消失比较符合“错题本”定义（只有错的才在里面）。
-                    // 用户可以在“全部”里找到它。
-                    // 修正：用户说“直到不再错为止”，说明用户希望在错题本里直接重做。
-                    // 所以我们需要修改 filterCategory 的逻辑？不，我们修改数据结构比较麻烦。
-                    // 让我们简单点：重做 = 清除记录。界面上刷新卡片。
-                    refreshCard(qId);
-                    
-                    // 如果在错题本视图，我们需要特别处理：不要让卡片立刻消失，而是变成初始状态。
-                    // 这需要我们在 filterCategory('mistakes') 时，包含那些刚刚被重置的题目？
-                    // 这比较复杂。
-                    // 替代方案：点击“重做”后，刷新卡片，卡片变为未做状态。
-                    // 如果此时切换分类，它会消失。如果不切换，它还在。
-                } else {
-                    refreshCard(qId);
-                }
-            }
-        }
-
-        function renderQuestions(items) {
-            const container = document.getElementById('questionsContainer');
-            container.innerHTML = '';
-
-            if (items.length === 0) {
-                let emptyMsg = "🤔 未找到相关题目";
-                if (currentCategory === 'mistakes') {
-                    emptyMsg = "🎉 太棒了！目前没有错题";
-                }
-                container.innerHTML = `
-                    <div class="text-center text-gray-500 mt-10">
-                        <p class="text-xl">${emptyMsg}</p>
-                        <p class="text-sm mt-2">${currentCategory === 'mistakes' ? '去刷题挑战一下吧' : '请尝试更换搜索关键词或切换分类'}</p>
-                    </div>`;
-                return;
-            }
-
-            items.forEach(q => {
-                const card = document.createElement('div');
-                card.id = `card-${q.id}`;
-                card.className = 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-300';
-                
-                // 标签颜色
-                let tagColor = 'bg-blue-100 text-blue-800';
-                if(q.category === 'program') tagColor = 'bg-purple-100 text-purple-800';
-                if(q.category === 'judge') tagColor = 'bg-orange-100 text-orange-800';
-                if(q.category === 'multi') tagColor = 'bg-green-100 text-green-800';
-
-                // 题目内容渲染
-                let contentHtml = q.content;
-                if (q.category === 'program') {
-                    contentHtml = `<pre><code class="language-python rounded-lg text-sm">${q.content}</code></pre>`;
-                } else {
-                    contentHtml = `<div class="text-lg text-gray-800 font-medium whitespace-pre-line">${q.content}</div>`;
-                }
-
-                // 选项/答案区域渲染
-                let interactionHtml = '';
-                
-                // --- 程序题模式 ---
-                if (q.category === 'program') {
-                    interactionHtml = `
-                        <div class="mt-4 pt-4 border-t border-gray-100">
-                            <button onclick="toggleProgramAnswer(${q.id})" class="flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm focus:outline-none">
-                                <span id="btn-text-${q.id}">▶ 查看答案与解析</span>
-                            </button>
-                            <div id="answer-${q.id}" class="hidden-panel overflow-hidden h-0 mt-2 bg-gray-50 rounded-lg">
-                                <div class="p-4">
-                                    <div class="mb-2">
-                                        <span class="font-bold text-green-600">参考答案：</span>
-                                        <div class="text-gray-900 mt-1 whitespace-pre-line font-mono bg-white p-2 rounded border">${q.answer}</div>
-                                    </div>
-                                    ${q.explanation ? `<div class="text-sm text-gray-600"><span class="font-bold text-gray-700">解析：</span>${q.explanation}</div>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } 
-                // --- 选择/判断题模式 ---
-                else {
-                    const progress = userProgress[q.id];
-                    const isAnswered = progress?.isAnswered;
-                    
-                    let optionsHtml = '<div class="mt-4 grid gap-2">';
-                    q.options.forEach((opt, idx) => {
-                        let btnClass = 'option-btn w-full text-left px-4 py-3 rounded-lg bg-white text-gray-700 font-medium';
-                        let isDisabled = '';
-                        let icon = '';
-
-                        if (isAnswered) {
-                            isDisabled = 'disabled';
-                            const isSelected = progress.selectedIndices.includes(idx);
-                            
-                            // 样式逻辑
-                            if (q.category === 'multi') {
-                                if (q.correctIndex.includes(idx)) {
-                                    btnClass += ' correct'; 
-                                    icon = '✓';
-                                } else if (isSelected) {
-                                    btnClass += ' wrong'; 
-                                    icon = '✕';
-                                }
-                            } else {
-                                if (idx === q.correctIndex) {
-                                    btnClass += ' correct';
-                                    icon = '✓';
-                                } else if (isSelected) {
-                                    btnClass += ' wrong';
-                                    icon = '✕';
-                                }
-                            }
-                        }
-
-                        optionsHtml += `
-                            <button onclick="handleOptionClick(${q.id}, ${idx})" 
-                                class="${btnClass}" ${isDisabled}>
-                                <div class="flex justify-between items-center">
-                                    <span>${opt}</span>
-                                    <span>${icon}</span>
-                                </div>
-                            </button>
-                        `;
-                    });
-                    optionsHtml += '</div>';
-
-                    // 提交按钮（仅多选需要）
-                    let submitBtnHtml = '';
-                    if (q.category === 'multi' && !isAnswered) {
-                        submitBtnHtml = `
-                            <button onclick="submitMultiAnswer(${q.id})" id="submit-${q.id}" class="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                                提交答案
-                            </button>
-                        `;
-                    }
-
-                    // 结果解析面板 + 重做按钮
-                    let resultPanelClass = isAnswered ? '' : 'hidden-panel h-0';
-                    let retryBtnHtml = '';
-                    // 如果答错了，或者是错题本模式，显示重做按钮
-                    if (isAnswered && !progress.isCorrect) {
-                        retryBtnHtml = `
-                            <div class="mt-3 text-right">
-                                <button onclick="retryQuestion(${q.id})" class="text-sm bg-white border border-red-200 text-red-600 px-3 py-1 rounded hover:bg-red-50 transition-colors flex items-center inline-flex">
-                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                    移出错题本 (重做)
-                                </button>
-                            </div>
-                        `;
-                    }
-
-                    let resultHtml = `
-                        <div id="result-${q.id}" class="${resultPanelClass} overflow-hidden mt-3 bg-blue-50 rounded-lg border border-blue-100 transition-all">
-                            <div class="p-4">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-bold ${progress?.isCorrect ? 'text-green-600' : 'text-red-600'}">
-                                        ${progress?.isCorrect ? '🎉 回答正确' : '⚠️ 回答错误'}
-                                    </span>
-                                </div>
-                                <div class="text-sm text-gray-700">
-                                    <span class="font-bold">解析：</span>${q.explanation || '暂无详细解析'}
-                                </div>
-                                ${retryBtnHtml}
-                            </div>
-                        </div>
-                    `;
-
-                    interactionHtml = optionsHtml + submitBtnHtml + resultHtml;
-                }
-
-                card.innerHTML = `
-                    <div class="p-6 ${currentCategory === 'mistakes' ? 'mistake-mode' : ''}">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="px-3 py-1 rounded-full text-xs font-semibold ${tagColor}">${q.type}</span>
-                            <span class="text-xs text-gray-400">ID: ${q.id}</span>
-                        </div>
-                        <div class="mb-2">
-                            ${contentHtml}
-                        </div>
-                        ${interactionHtml}
+<body class="bg-gray-50 min-h-screen">
+    <button id="menuBtn" class="md:hidden fixed top-4 left-4 z-50 bg-blue-500 text-white p-2 rounded-lg shadow-lg">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+    </button>
+    <div class="flex">
+        <aside id="sidebar" class="sidebar w-64 bg-white shadow-lg h-screen fixed left-0 top-0 overflow-y-auto">
+            <div class="p-6">
+                <h1 class="text-xl font-bold text-gray-800 mb-2">🤖 AI复习系统</h1>
+                <p class="text-sm text-gray-500 mb-6">做到不会错为止</p>
+                <div class="mb-6">
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-gray-600">学习进度</span>
+                        <span id="progressText" class="font-medium text-blue-600">0%</span>
                     </div>
-                `;
-                container.appendChild(card);
-            });
-            hljs.highlightAll();
-        }
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progressBar" class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p id="progressDetail" class="text-xs text-gray-500 mt-1">已完成 0 / 0 题</p>
+                </div>
+                <nav id="navMenu" class="space-y-2"></nav>
+                <button onclick="resetProgress()" class="mt-6 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg transition">🔄 重置进度</button>
+            </div>
+        </aside>
+        <main class="flex-1 md:ml-64 p-4 md:p-8">
+            <div class="max-w-4xl mx-auto mb-6">
+                <input type="text" id="searchInput" placeholder="🔍 搜索题目..." class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition" oninput="handleSearch(this.value)">
+            </div>
+            <div class="max-w-4xl mx-auto mb-4">
+                <h2 id="currentCategory" class="text-2xl font-bold text-gray-800">📚 全部题目</h2>
+                <p id="currentCount" class="text-gray-500 mt-1">共 0 题</p>
+            </div>
+            <div id="questionList" class="max-w-4xl mx-auto space-y-6"></div>
+            <div id="emptyState" class="hidden max-w-4xl mx-auto text-center py-20">
+                <div class="text-6xl mb-4">🎉</div>
+                <h3 class="text-xl font-medium text-gray-700 mb-2">太棒了！</h3>
+                <p class="text-gray-500">当前分类没有题目</p>
+            </div>
+        </main>
+    </div>
+<script>
+const DATABASE = [
+// 单选题
+{id:1,type:'single',question:'下面不属于机器学习算法的是（ ）',options:['A. 线性回归','B. 三维回归','C. 支持向量机 SVM','D. 决策树'],answer:'B',analysis:''},
+{id:2,type:'single',question:'深度学习（deep learning）是（ ）的分支',options:['A. 机器学习','B. 语音识别','C. 图像识别','D. 医疗影像'],answer:'A',analysis:''},
+{id:3,type:'single',question:'下列不属于深度学习网络的是（ ）',options:['A. 深度神经网络','B. 卷积神经网络','C. 机器学习'],answer:'C',analysis:''},
+{id:4,type:'single',question:'图像识别一般采用什么网络（ ）',options:['A. 深度神经网络','B. 卷积神经网络','C. 循环神经网络'],answer:'B',analysis:''},
+{id:5,type:'single',question:'语音领域一般采用什么网络（ ）',options:['A. 深度神经网络','B. 卷积神经网络','C. 循环神经网络'],answer:'C',analysis:''},
+{id:6,type:'single',question:'以下关于激活函数描述正确的是（ ）',options:['A. 表示样本和预测之间的偏差程度','B. 是非线性函数','C. 是线性函数'],answer:'B',analysis:''},
+{id:7,type:'single',question:'以下关于损失函数描述正确的是（ ）',options:['A. 一定是一个线性函数','B. 一定是一个非线性函数','C. 表示样本和预测之间的偏差程度'],answer:'C',analysis:''},
+{id:8,type:'single',question:'以下哪个函数不是常见的激活函数（ ）',options:['A. sigmoid','B. relu','C. categorical_crossentropy'],answer:'C',analysis:''},
+{id:9,type:'single',question:'以下关于池化的表述正确的是（ ）',options:['A. 池化的主要作用是用来升维','B. 原始图片经过池化运算后，得到的目标图像比原始图像像素相同','C. 原始图片的池化，目标像素的大小主要取决于滤波器窗口的大小和移动步子的大小'],answer:'C',analysis:''},
+{id:10,type:'single',question:'以下关于 CIFAR-10 数据集描述正确的是（ ）',options:['A. CIFAR-10 数据集共 60000 张 32*32 的 RGB 图像','B. 测试数据集共 10000 张图像，用于原始数据的训练','C. 训练数据集共 50000 张图像，用于原始数据的训练'],answer:'A',analysis:''},
+{id:11,type:'single',question:'下列哪一项在神经网络中引入了非线性（ ）',options:['A. 随机梯度下降','B. 修正线性单元（ReLU）','C. 卷积函数','D. 以上都不正确'],answer:'B',analysis:''},
+{id:12,type:'single',question:'梯度下降算法的正确步骤是什么？a.计算预测值和真实值之间的误差 b.重复迭代直至得到网络权重的最佳值 c.把输入传入网络得到输出值 d.用随机值初始化权重和偏差 e.对每一个产生误差的神经元调整相应的权重值以减小误差',options:['A. abcde','B. edcba','C. cbaed','D. dcaeb'],answer:'D',analysis:''},
+{id:13,type:'single',question:'什么情况下神经网络模型被称为深度学习模型？',options:['A. 加入更多层，使神经网络的深度增加','B. 有维度更高的数据','C. 当这是一个图形识别的问题时','D. 以上都不正确'],answer:'A',analysis:''},
+{id:14,type:'single',question:'深度神经网络英文简称为（ ）',options:['A. DNN','B. CNN','C. RNN','D. LSTM'],answer:'A',analysis:''},
+{id:15,type:'single',question:'卷积神经网络的英文简写为（ ）',options:['A. DNN','B. CNN','C. RNN','D. LSTM'],answer:'B',analysis:''},
+{id:16,type:'single',question:'循环神经网络的英文简写为（ ）',options:['A. DNN','B. CNN','C. RNN','D. LSTM'],answer:'C',analysis:''},
+{id:17,type:'single',question:'什么情况下神经网络模型被称为深度学习模型？',options:['A. 加入更多层，使神经网络的深度增加','B. 有维度更高的数据','C. 当这是一个图形识别的问题时','D. 以上都不正确'],answer:'A',analysis:''},
+{id:18,type:'single',question:'在一个神经网络中，知道每一个神经元的权重和偏差是最重要的一步。如果知道了神经元准确的权重和偏差，便可以近似任何函数，但怎么获知每个神经的权重和偏移呢？',options:['A. 搜索每个可能的权重和偏差组合，直到得到最佳值','B. 赋予一个初始值，然后检查跟最佳值的差值，不断迭代调整权重','C. 随机赋值，听天由命','D. 以上都不正确'],answer:'B',analysis:''},
+{id:19,type:'single',question:'卷积神经网络准确度与参数数量（特征核的数量）有关。如果增加神经网络的宽度，精确度会增加到一个特定阈值后，便开始降低。造成这一现象的可能原因是什么？',options:['A. 即使增加卷积核的数量，只有少部分会起作用','B. 当卷积核数量增加时，导致过拟合','C. 当卷积核数量增加时，神经网络的预测能力会降低','D. 以上都不正确'],answer:'B',analysis:''},
+{id:20,type:'single',question:'在感知机中（Perceptron）的任务顺序是什么？1.随机初始化感知机的权重 2.去到数据集的下一批 3.如果预测值和输出不一致则调整权重 4.对一个输入样本计算输出值',options:['A. 1，2，3，4','B. 4，3，2，1','C. 1，4，3，2','D. 3，1，2，4'],answer:'C',analysis:''},
+{id:21,type:'single',question:'下列哪个函数不可以做激活函数？',options:['A. y=tanh(x)','B. y=sin(x)','C. y=max(x, 0)','D. y=2x'],answer:'D',analysis:''},
+{id:22,type:'single',question:'如果我们使用的学习率太大，会导致（ ）',options:['A. 网络将收敛','B. 网络将无法收敛','C. 网络收敛的慢','D. 不知道'],answer:'B',analysis:''},
+{id:23,type:'single',question:'以下现象属于过拟合的是（ ）',options:['A. 训练集 Loss 下降，验证集 loss 不变','B. 训练集 Loss 下降，验证集 loss 上升','C. 训练集 Loss 上升，验证集 loss 上升','D. 训练集 Loss 下降，验证集 loss 下降'],answer:'B',analysis:''},
+{id:24,type:'single',question:'关于欠拟合（under-fitting），下面哪个说法是正确的？',options:['A. 训练误差较大，测试误差较小','B. 训练误差较小，测试误差较大','C. 训练误差较大，测试误差较大','D. 训练误差较小，测试误差较小'],answer:'C',analysis:''},
+{id:25,type:'single',question:'作为人工智能的三大要素之一，算力的表征单位 1T，指的是 TOPS，运算速度每秒中多少次',options:['A. 10^12','B. 10^6','C. 10^9','D. 10^15'],answer:'A',analysis:''},
+{id:26,type:'single',question:'1950年10月，图灵发表论文《机器能思考吗》。关于图灵测试以下说法错误的是',options:['A. 图灵测试用来测试计算机程序的智能程度','B. 图灵测试计算机和被测试的人分别在两个不同的房间里','C. 图灵测试Responser计算机和人必须要用自然语言做答','D. 被测人在回答问题时尽可能表明他是一个"真正的"人，而计算机也将尽可能逼真的模仿人的思维方式和思维过程'],answer:'C',analysis:'为了观测者能通过电传打字机与机器和人联系（避免要求机器模拟人外貌和声音）'},
+{id:27,type:'single',question:'（ ）年首次提出"人工智能（Artificial Intelligence，简称AI）"这一概念，标志着人工智能学科的诞生',options:['A. 1956','B. 1978','C. 1950','D. 1990'],answer:'A',analysis:''},
+{id:28,type:'single',question:'人工智能发展至今，经历了三次发展浪潮，其中第二次发展热潮出现的标志性事件有',options:['A. IBM公司的跳棋程序Samuel，战胜了当时的人类高手','B. DEC公司和CMU大学合作研发的专家系统XCON，第一个商用专家系统，每年带4000万美元收益','C. IBM的计算机系统"深蓝"战胜了国际象棋世界冠军卡斯帕罗夫','D. 第一台工业机器人Unimate替代人类在GM组装线工作'],answer:'B',analysis:'专家系统XCON实现盈利是人工智能第二次热潮的标志性事件'},
+{id:29,type:'single',question:'关于人工智能发展现状，全球人工智能企业城市分布，活跃的人工智能企业数量最多的城市是',options:['A. 旧金山','B. 北京','C. 伦敦','D. 上海'],answer:'B',analysis:'全球活跃人工智能企业数量排名：北京、旧金山、伦敦、上海、纽约'},
+{id:30,type:'single',question:'自然语言处理（NLP）研究能实现人与计算机之间用自然语言进行有效通信的各种理论和方法，以下说法错误的是',options:['A. 自然语言处理主要应用场景包括机器翻译、机器阅读理解和问答系统等','B. NLP分析技术主要包括词法分析、句法分析、语义分析','C. NLP是计算机科学、人工智能、语言学的交叉学科技术领域','D. 智能聊天助理程序是采用自然语言处理算法来实现人机对话，因此只涉及NLP技术'],answer:'D',analysis:'智能聊天机器人除了NLP技术，还包括语音识别、语音合成、信息技术等'},
+{id:31,type:'single',question:'关于人工智能、机器学习、深度学习之间的关系，以下说法正确的是',options:['A. 三个并列概念','B. 深度学习包含机器学习，人工智能包含深度学习','C. 人工智能包含机器学习，机器学习包含深度学习','D. 人工智能包含机器学习与深度学习，深度学习与机器学习并列'],answer:'C',analysis:''},
+{id:32,type:'single',question:'为了观察测试Y与X之间的线性关系，X是连续变量，使用下列（ ）图形较适合？',options:['A. 散点图','B. 柱形图','C. 直方图','D. 以上都不对'],answer:'A',analysis:''},
+{id:33,type:'single',question:'当不知道数据所带的标签时，可以使用（ ）技术促使带同类标签的数据与带其他标签的数据相分离',options:['A. 分类','B. 聚类','C. 关联分析','D. 隐马尔可夫链'],answer:'B',analysis:''},
+{id:34,type:'single',question:'K-Means的缺点不包括（ ）',options:['A. K必须是事先给定的','B. 需要选择初始聚类中心','C. 对于噪声和孤立点数据是敏感的','D. 可伸缩、高效'],answer:'D',analysis:''},
+{id:35,type:'single',question:'以下不属于计算机视觉应用场景的是（ ）',options:['A. 文字识别','B. 人脸识别','C. 智能语音客服','D. 医疗影像'],answer:'C',analysis:''},
+{id:36,type:'single',question:'关于图像压缩以下说法错误的是',options:['A. 图像压缩包括有损压缩和无损压缩','B. 有损压缩适合各种图像的压缩，且都不影响人眼观察','C. 经过无损压缩以后的数据进行图像复原（解压），重建的图像与原始图像完全相同','D. JPEG图片主要采用DCT（离散余弦变化）和霍夫曼编码的方式，支持有损和无损压缩'],answer:'B',analysis:'比如工程图纸不能进行有损压缩，有损压缩适合自然图像'},
+{id:37,type:'single',question:'一幅分辨率为200*300的图像，关于该图像的存储量，以下说法正确的是',options:['A. 如果是黑白图像，该图像的存储量是60KBytes','B. 如果是灰度图像，该图像的存储量是7.5Kbytes','C. 如果是24bit真彩图像，该图像的存储量是120Kbytes','D. 如果是灰度图像，该图像的存储量是60KBytes'],answer:'D',analysis:''},
+{id:38,type:'single',question:'用OpenCV做人脸检测时，face_date.detectMultiScale（image，scaleFactor，minNeighbors）的参数说明错误的是',options:['A. image待检测图像，为了加快速度，一般直接输入灰度图像','B. scaleFactor表示在前后两次相继的扫描中，搜索窗口的比例系数','C. minNeighbors表示构成检测目标的相邻矩形的最小个数','D. minNeighbors参数设置越大，则检测到人脸的可能性越小'],answer:'D',analysis:''},
+{id:39,type:'single',question:'2000年左右，语音识别领域处于统治地位的模型是',options:['A. DNN-HMM','B. GMM-HMM','C. RNN-T','D. Neural Transducer'],answer:'A',analysis:''},
+{id:40,type:'single',question:'下列不属于深度学习网络的是',options:['A. 深度神经网络','B. 卷积神经网络','C. 机器学习','D. 以上都不能选'],answer:'C',analysis:''},
+{id:41,type:'single',question:'以下哪个函数不是常见的激活函数',options:['A. sigmoid','B. relu','C. categorical_crossentropy','D. 以上都不能选'],answer:'C',analysis:''},
+{id:42,type:'single',question:'以下关于损失函数描述正确的是',options:['A. 一定是一个线性函数','B. 一定是一个非线性函数','C. 表示样本和预测之间的偏差程度','D. 以上都不对'],answer:'C',analysis:''},
+{id:43,type:'single',question:'以下不属于计算机视觉应用场景的是哪一项？',options:['A. 文字识别','B. 人脸识别','C. 智能语音客服','D. 医疗影像'],answer:'C',analysis:'智能语音识别是语音识别技术'},
+{id:44,type:'single',question:'公安视频侦查平台，可以通过行为分析技术对实时视频进行智能分析，以下哪一项不属于视频行为分析可判断的情况',options:['A. 穿越警戒面','B. 发表非法言论','C. 人员聚集','D. 人员徘徊'],answer:'B',analysis:''},
+{id:45,type:'single',question:'关于数字图像成像原理，以下说法错误的是',options:['A. 我们手机、电脑中所存储的图像是模拟图像','B. 照相机是仿生设备，照相机的镜头相当于人眼的角膜和晶状体','C. 数字相机、摄像机在底片上成像是倒立的','D. 我们在手机、电脑中所存储的图像是对模拟图像采样量化得到的数字图像'],answer:'A',analysis:''},
+{id:46,type:'single',question:'关于黑白图像，以下说法错误的是',options:['A. 黑白图像整张图只有0和1两种像素值','B. 黑白图像的色深是2bit','C. 黑白图像就是二值化图像','D. 黑白图像就是非黑即白的图像'],answer:'B',analysis:'黑白图像的色深是1bit'},
+{id:47,type:'single',question:'关于灰度图像，以下说法正确的是',options:['A. 灰度图像就是二值图像','B. 灰度图像的色深是1bit','C. 灰度图像每个像素点有256种可能','D. 灰度图像每个像素点有8种可能的颜色'],answer:'C',analysis:'灰度图像色深8bit，每个像素点有256种可能性'},
+{id:48,type:'single',question:'关于彩色图像，以下说法正确的是',options:['A. 人眼所见的彩色图像都是真彩图像','B. 彩色图像每个像素点需要1Byte数据表示','C. 彩色图像分为红、绿、蓝三个颜色通道，所以每个像素点需要3bit表示','D. 真彩图像每个像素点需要用3Bytes表示'],answer:'D',analysis:'真彩图像，每个像素点需要3Byte表示，每个Byte分别表示RGB三色通道'},
+{id:49,type:'single',question:'图像压缩分为有损压缩和无损压缩，以下哪种图像适合有损压缩',options:['A. 医疗图像','B. 档案扫描图像','C. 技术图纸','D. 出游照片'],answer:'D',analysis:''},
+{id:50,type:'single',question:'关于图像分辨率，以下说法错误的是',options:['A. 图像分辨率是一幅图片中像素的组成数量','B. 图像分辨率10dpi指的是1英尺长度上有10个像素点数','C. 图像的分辨率也可以用"水平像素数*垂直像素"数表示','D. 同样大小的显示区域中，图像分辨率越大，图像看起来越细腻'],answer:'B',analysis:'10dpi指的是1英寸（inch）长度上10个点，不是1英尺（foot）'},
+{id:51,type:'single',question:'关于图像色深，以下说法正确的是',options:['A. 如果一张图像色深是4，则这样图像每个像素点存储需要4Byte','B. 色深就是颜色深度，指存储每个像素的颜色信息所占用的二进制Byte数','C. 色深就是颜色深度，指存储每个像素的颜色信息所占用的二进制bit数','D. 如果一张图像色深是4，那么这张图像每个像素点最多可以表示4种颜色'],answer:'C',analysis:'色深用bit表示'},
+{id:52,type:'single',question:'关于图像亮度和对比度以下说法正确的是',options:['A. 图像亮度指的是图像的明暗程度，图像的像素值整体越接近于255，图像越亮','B. 图像整体像素值越接近255，说明图像对比度越高','C. OpenCV中图像的亮度和对比度应用公式g(x)=αf(x)+β，其中参数α是用来修改亮度的','D. 图像亮度越大，图像看上去更清晰'],answer:'A',analysis:''},
+{id:53,type:'single',question:'通过OpenCV调节彩色图像调整亮度和对比度：g(x)=αf(x)+β=1.5*f(x)+30，以下描述错误的是',options:['A. f(x)是原图像素值','B. α=1.5指的是图像的对比度提高1.5倍','C. β=30指的是图像的亮度增加30','D. 原图某像素点灰度为20，经过该运算后，该点灰度值为50'],answer:'D',analysis:'应该为60，（20*1.5+30）'},
+{id:54,type:'single',question:'关于图像阈值分割，以下说法错误的是',options:['A. 阈值分割法是一种基于区域的图像分割技术，原理是把图像象素点分为若干类','B. 阈值分割的目的是压缩数据量，简化了分析和处理步骤','C. 图像阈值分割是将图像按一定阈值分割为一定数量的小块','D. 常规的阈值分割是将一幅灰度图像转换成二值图像'],answer:'C',analysis:'阈值分割指按一定阈值对像素点进行分类，并不是真的分割图像'},
+{id:55,type:'single',question:'阈值分割是图像预处理的重要方法，实现阈值分割有多种方法，以下哪一项不是阈值分割的方法',options:['A. 固定阈值分割','B. 反向阈值分割','C. 最大类间方差（OTSU）阈值分割','D. 自适应阈值分割'],answer:'B',analysis:''},
+{id:56,type:'single',question:'关于自适应阈值分割，以下说法错误的是',options:['A. 自适应阈值分割分割时，算法自动计算一个阈值应用于整张图像','B. 自适应阈值分割是每次取图片的一小部分计算阈值','C. 自适应阈值分割各区域阈值不一定相同','D. 自适应阈值分割的算法有平均值法与高斯法'],answer:'A',analysis:'自适应阈值分割按区域划分，每个区域计算区域阈值'},
+{id:57,type:'single',question:'图像边缘检测是图像处理和计算机视觉中的基本问题，以下关于边缘检测说法错误的是',options:['A. 边缘是指图像局部强度变化最显著的部分','B. 图像边缘检测可以大幅度减少数据量','C. 边缘检测是为了检测图像的边框','D. 边缘检测目的是标识数字图像中亮度变化明显的点'],answer:'C',analysis:'边缘检测不是为了检测边框，而是检测并标注出图像中的变化点'},
+{id:58,type:'single',question:'图像边缘检测的步骤及排序以下表述准确的是哪一项',options:['A. 增强-滤波-检测','B. 增强-检测-滤波','C. 滤波-检测-增强','D. 滤波-增强-检测'],answer:'D',analysis:'边缘检测需要先滤波，才增强，最后检测'},
+{id:59,type:'single',question:'图像边缘检测函数edges=Canny（image，threshold1，threshold2），以下说法正确的是',options:['A. threshold1是较大阈值，threshold2是较小阈值','B. 检测到的所有边缘点是介于较大阈值和较小阈值之间的','C. 检测到的边缘点：是变化率大于较大阈值点，以及变化率介于较小阈值与较大阈值之间的点补齐连线','D. 该函数返回值edges是一个由图像边缘点组成的一维向量'],answer:'C',analysis:'threshold1最小阈值，threshold2最大阈值'},
+{id:60,type:'single',question:'关于计算机视觉应用开发流程，以下哪项排序正确',options:['A. 图像采集-图像标注-图像清洗-模型创建训练-模型评估发布-调用应用','B. 图像采集-图像清洗-图像标注-模型评估发布-模型创建训练-调用应用','C. 图像采集-图像清洗-图像标注-模型创建训练-调用应用-模型评估发布','D. 图像采集-图像清洗-图像标注-模型创建训练-模型评估发布-调用应用'],answer:'D',analysis:''},
+{id:61,type:'single',question:'以下不属于图像存储格式的是',options:['A. bmp','B. jpeg','C. gif','D. mp3'],answer:'D',analysis:''},
+{id:62,type:'single',question:'灰度等级为0-255的灰度图像，其像素深度是（ ）bits',options:['A. 2','B. 8','C. 16','D. 24'],answer:'B',analysis:''},
+{id:63,type:'single',question:'深度学习中的"深度"是指',options:['A. 计算机理解深度','B. 中间神经元网络的层次很多','C. 计算机的求解更加精确','D. 计算机对问题的处理更加灵活'],answer:'B',analysis:''},
+{id:64,type:'single',question:'下列哪个神经网络结构会发生权重共享',options:['A. 卷积神经网络','B. 循环神经网络','C. 全连接神经网络','D. 选项A和B'],answer:'D',analysis:''},
+{id:65,type:'single',question:'关于句子向量表示，下列说法正确的是',options:['A. 只能通过有监督学习获得','B. 只能通过无监督学习获得','C. 有监督和无监督学习都可以获得','D. 以上都不对'],answer:'C',analysis:''},
+{id:66,type:'single',question:'以下哪种不是自适应学习率方法',options:['A. Mini-batch SGD','B. Adagrad','C. RMSprop','D. 以上都不对'],answer:'A',analysis:''},
+{id:67,type:'single',question:'哪种策略可以加速词向量训练',options:['A. para2vect','B. 层级softmax','C. 最大似然估计','D. 以上都不对'],answer:'B',analysis:''},
+{id:68,type:'single',question:'关于梯度下降算法，以下说法正确的是',options:['A. 随机梯度下降算法是每次考虑单个样本进行权重更新','B. Mini-Batch梯度下降算法是批量梯度下降和随机梯度下降的折中','C. 批量梯度下降算法是每次考虑整个训练集进行权重更新','D. 以上都对'],answer:'D',analysis:''},
+{id:69,type:'single',question:'与传统机器学习方法相比，深度学习的优势在于',options:['A. 深度学习可以自动学习特征','B. 深度学习完全不需要做数据预处理','C. 深度学习完全不提取底层特征，如图像边缘、纹理等','D. 深度学习不需要调参'],answer:'A',analysis:''},
+{id:70,type:'single',question:'下列哪一项在神经网络中引入了非线性',options:['A. 随机梯度下降','B. Sigmoid激活函数','C. 增大权重和偏置的初始化值','D. 以上都不对'],answer:'B',analysis:''},
+{id:71,type:'single',question:'在其他条件不变的前提下，以下哪些做法容易引起机器学习中的过拟合问题',options:['A. 增加训练集量','B. 减少神经网络隐藏节点数','C. 在损失函数中增加正则项','D. SVM算法中使用高斯核/RBF核代替线性核'],answer:'D',analysis:''},
+{id:72,type:'single',question:'图像识别一般采用什么网络',options:['A. DNN','B. CNN','C. RNN','D. LSTM'],answer:'B',analysis:''},
+{id:73,type:'single',question:'下列说法正确的是',options:['A. 一个神经元只有一个输入和一个输出','B. 一个神经元有多个输入和一个输入','C. 一个神经元有多个输入和多个输出','D. 上述都正确'],answer:'D',analysis:''},
+{id:74,type:'single',question:'梯度下降算法的正确步骤是什么？1.计算预测值和真实值之间的误差 2.迭代更新直到找到最佳权重 3.把输入传入网络得到输出值 4.初始化随机权重和偏差 5.对每一个产生误差的神经元改变相应的权重值以减少误差',options:['A. 12345','B. 54321','C. 43152','D. 32154'],answer:'C',analysis:''},
+{id:75,type:'single',question:'下列哪一项在神经网络中引入了非线性？',options:['A. 随机梯度下降','B. 激活函数','C. 卷积函数','D. 以上都不正确'],answer:'B',analysis:''},
+{id:76,type:'single',question:'下列哪一种架构有反馈连接？',options:['A. 循环神经网络','B. 卷积神经网络','C. 深度神经网络','D. 感知器模型'],answer:'A',analysis:''},
+{id:77,type:'single',question:'在Keras深度学习框架中，通常使用哪个层解决过拟合现象？',options:['A. Dropout层','B. Maxpooling2D层','C. Conv2D层','D. Flatten层'],answer:'A',analysis:''},
+{id:78,type:'single',question:'若未在图像边界填充数字，对一个15*15大小的图像，使用3*3的卷积核，进行步长为3的卷积后，结果图像的大小为',options:['A. 11*11','B. 5*5','C. 7*7','D. 13*13'],answer:'B',analysis:''},
+{id:79,type:'single',question:'关于numpy的说法，错误的是',options:['A. numpy提供了多维数组和矩阵的常用操作','B. numpy中涵盖了高效的科学计算函数','C. numpy在完成数组的矩阵运算时，需要配合循环操作','D. numpy的底层运算通过C语言实现，处理速度快、效率高'],answer:'C',analysis:''},
+{id:80,type:'single',question:'下列关于长短期记忆网络LSTM和循环神经网络RNN的关系描述正确的是',options:['A. LSTM是简化版的RNN','B. LSTM是RNN的扩展，其通过特殊的结构设计来避免长期依赖问题','C. LSTM是多层的RNN','D. LSTM是双向的RNN'],answer:'B',analysis:''},
+{id:81,type:'single',question:'对于以下程序段的输出结果，描述错误的是：plt.subplot(252) plt.subplot(257) plt.subplot(2,5,10)',options:['A. 生成的3个子图均位于不同的列上','B. 该画布中一共可以绘制10个子图','C. 本段程序绘制了3个子图','D. plt.subplot(252)等价于plt.subplot(2,5,2)'],answer:'A',analysis:''},
+{id:82,type:'single',question:'下列说法中，错误的是',options:['A. numpy数组中要求所有元素的数据类型是一致的','B. 二维数组[[0,1],[2,3],[4,5]]的shape是(2,3)','C. A=np.arange(0,3,0.5)，a中含有6个元素','D. np.arange(0,6,1)表示从0开始，到5间隔为1的一维数组'],answer:'B',analysis:''},
+{id:83,type:'single',question:'Z=np.arange(10,50)，则关于Z的表述错误的是',options:['A. 等价于np.linspace(10,50,40)','B. Z表示从10开始，到49，间隔为1的离散数组','C. Z的shape为(40,)','D. Z是离散的一维数组'],answer:'A',analysis:''},
+{id:84,type:'single',question:'A=np.ones(6).reshape(3,2)，则以下说法正确的是',options:['A. A*A（对应元素相乘）的输出结果为[[1,1],[1,1],[1,1]]','B. A.T的输出结果与np.ones(6).reshape(2,3)一样','C. A@A（叉乘）的输出结果为：[[2,2],[2,2],[2,2]]','D. A表示3行2列元素全部是1的二维数组'],answer:'C',analysis:''},
+{id:85,type:'single',question:'下列关于循环神经网络RNN说法错误的是',options:['A. 隐藏层之间的节点有连接','B. 隐藏层的输入不仅包括输入层的输出，还包括上一时刻隐藏层的输出','C. 隐藏层之间的节点没有连接','D. 网络会对之前时刻的信息进行记忆并应用于当前输出的计算中'],answer:'C',analysis:''},
+{id:86,type:'single',question:'深度学习系统中通常将数据集划分为训练集和测试集，其中被用来学习得到系统的参数值的是',options:['A. 测试集','B. 训练集和测试集','C. 其他答案都不对','D. 训练集'],answer:'D',analysis:''},
+{id:87,type:'single',question:'下列关于机器学习与深度学习的描述错误的是',options:['A. 深度学习是机器学习的分支','B. 深度学习来源于人工神经网络','C. 深度学习是多层的人工神经网络，典型的模型包括卷积神经网络等','D. 深度学习不需要依赖强大的数据集，建立合适的模型和训练参数是准确率高的关键'],answer:'D',analysis:''},
+{id:88,type:'single',question:'标准RNN无法处理更长的上下文间隔，即长期依赖问题。Hochreiter&Schmidhuber(1997)提出一种特殊的RNN模型来避免长期依赖问题，该种改进的模型是',options:['A. 长期记忆网络LSTM','B. 受限玻尔兹曼机','C. 多层感知机MLP','D. 卷积神经网络CNN'],answer:'A',analysis:''},
+{id:89,type:'single',question:'什么是影响神经网络的深度选择的因素？1.神经网络的模型 2.深入数据 3.计算能力 4.学习率 5.输出函数映射',options:['A. 1245','B. 2345','C. 1345','D. 以上都是'],answer:'D',analysis:''},
+{id:90,type:'single',question:'在感知机中进行训练的顺序是什么？1.初始化权重 2.去到数据集的下一批 3.如果预测值和输出值不一致改变权重 4.对一个输入样本计算输出值',options:['A. 1234','B. 1324','C. 1432','D. 1423'],answer:'C',analysis:''},
+{id:91,type:'single',question:'AI的英文缩写是',options:['A. Automatic Information','B. Artificial Information','C. Automatic Intelligence','D. Artificial Intelligence'],answer:'D',analysis:''},
+{id:92,type:'single',question:'语音语义识别通常选用什么神经网络？',options:['A. DNN','B. CNN','C. 感知器模型','D. RNN或LSTM'],answer:'D',analysis:''},
+// 多选题
+{id:93,type:'multiple',question:'机器学习跟下面哪些领域有着很深的联系',options:['A. 模式识别','B. 统计学习','C. 数据挖掘','D. 计算机视觉'],answer:'ABCD',analysis:''},
+{id:94,type:'multiple',question:'深度学习主要的应用领域有',options:['A. 人脸识别类','B. 文字识别类','C. 图像识别类','D. 语音及理解类'],answer:'ABCD',analysis:''},
+{id:95,type:'multiple',question:'深度学习主要经典算法主要应用在',options:['A. 计算机视觉','B. 自然语言处理','C. 强化学习','D. 比特币'],answer:'ABC',analysis:''},
+{id:96,type:'multiple',question:'深度学习算法主要包括有',options:['A. 深度神经网络','B. 卷积神经网络','C. 循环神经网络','D. 对抗生成网络'],answer:'ABCD',analysis:''},
+{id:97,type:'multiple',question:'深度神经网络和浅度神经网络模型具有相似的结构，由下面哪些构成？',options:['A. 输入层','B. 输出层','C. 隐藏层','D. 重构层'],answer:'ABC',analysis:''},
+{id:98,type:'multiple',question:'以下能够避免过拟合的方法有？',options:['A. 数据增强，从数据源头获取更多数据','B. 增加训练次数','C. 增加网络的深度','D. 正则化'],answer:'AD',analysis:''},
+{id:99,type:'multiple',question:'以下能够避免梯度消失和梯度爆炸的方法有？',options:['A. 梯度裁剪，给定梯度的上下阈值','B. 批规范化','C. 使用残差网络结构','D. 采用带记忆的网络结构，如LSTM'],answer:'ABCD',analysis:''},
+{id:100,type:'multiple',question:'以下哪些属于深层网络模型？',options:['A. AlexNet','B. VGG','C. GoogleNet','D. ResNet'],answer:'ABCD',analysis:''},
+{id:101,type:'multiple',question:'卷积层具有以下哪些特点？',options:['A. 稀疏交互','B. 参数共享','C. 等变表示','D. 稠密交互'],answer:'ABC',analysis:''},
+{id:102,type:'multiple',question:'下面属于神经网络简称的是',options:['A. CNN','B. DNN','C. RNN','D. DNA'],answer:'ABC',analysis:''},
+{id:103,type:'multiple',question:'深度学习最显著的应用是哪两大领域',options:['A. 计算机视觉','B. 自然语言处理（NLP）领域','C. 工业领域','D. 医学领域'],answer:'AB',analysis:''},
+{id:104,type:'multiple',question:'相对于DNN模型，CNN模型做了哪些改变？',options:['A. 局部连接','B. 使用了relu激活函数','C. 参数共享','D. 增加了batch normalization'],answer:'AC',analysis:''},
+{id:105,type:'multiple',question:'以下关于激活函数描述正确的是',options:['A. 表示样本和预测之间的偏差程度','B. 是非线性函数','C. 是线性函数','D. 以上都不能选'],answer:'BC',analysis:''},
+{id:106,type:'multiple',question:'人工智能的三要素包括',options:['A. 算法','B. 机器人','C. 算力','D. 大数据'],answer:'ACD',analysis:'人工智能的三要素：算法、算力、大数据'},
+{id:107,type:'multiple',question:'人工智能研究的主要目的包括',options:['A. 促使智能机器会听（语音识别、机器翻译等）、会看（图像识别、文字识别等）','B. 促使智能机器会说（语音合成、人机对话等）、会思考（人机对弈、定理证明等）','C. 促使智能机器会学习（机器学习、知识表示等）','D. 促使智能机器会行动（机器人、自动驾驶汽车等）'],answer:'ABCD',analysis:''},
+{id:108,type:'multiple',question:'计算机从产生到现在历经四代，关于四代计算机的主要特点，以下说法正确的是',options:['A. 第一代计算机是晶体管','B. 第二代计算机是电子管','C. 第三代计算机是集成电路','D. 第四代计算机时超大规模集成电路'],answer:'CD',analysis:''},
+{id:109,type:'multiple',question:'关于人工智能的发展趋势，以下表述正确的是',options:['A. 复杂场景下，机器不能完全代替人类，人机协同模式将成为未来的主流','B. 人机协同的模式是以知识图谱为支撑进行推理、推荐，并进行人和机器资源的合理配置','C. 我国5G商用，将支撑大量设备实时在线和海量数据的传输，使企业可获得的数据量、数据实时性大幅提升，为更多人工智能应用提供可能','D. 人工智能的应用将从企业内部智能化延伸到产业智能化'],answer:'ABCD',analysis:''},
+{id:110,type:'multiple',question:'根据学习模式将机器学习分类为',options:['A. 监督学习','B. 非监督学习','C. 半监督学习','D. 强化学习'],answer:'ABCD',analysis:''},
+{id:111,type:'multiple',question:'下列属于监督学习的有',options:['A. 聚类','B. 分类','C. 回归','D. 降维'],answer:'BC',analysis:''},
+{id:112,type:'multiple',question:'数据的来源途径有许多，如下哪些属于数据来源',options:['A. 网络爬虫得到的数据','B. 计算机网络运行产生的日志','C. 人在微博上发表的记录','D. 传感器设备采集的数据'],answer:'ABCD',analysis:''},
+{id:113,type:'multiple',question:'在无人驾驶中，车辆在行驶时需要实时地去感知周围的环境，无人驾驶一般包含哪些感知传感器',options:['A. 激光雷达','B. 摄像头','C. 夜视摄像头','D. 超声波传感器'],answer:'ABCD',analysis:''},
+{id:114,type:'multiple',question:'计算机视觉在医学影像中的主要应用技术方向包含以下哪几个',options:['A. 图像重建','B. 病灶检测','C. 计算机辅助诊断','D. 图像分割'],answer:'ABCD',analysis:''},
+{id:115,type:'multiple',question:'图像边缘检测主要分为以下几个步骤',options:['A. 滤波','B. 增强','C. 分割','D. 检测'],answer:'ABD',analysis:''},
+{id:116,type:'multiple',question:'下面属于语音交互系统中的模块有',options:['A. 语音识别','B. 语音合成','C. 语音理解','D. 语言生成'],answer:'ABCD',analysis:''},
+{id:117,type:'multiple',question:'下面应用智能语音处理的领域有',options:['A. 手机助理','B. 智能家居','C. 文字识别','D. 智能车载助手'],answer:'ABD',analysis:''},
+{id:118,type:'multiple',question:'以下哪些场景属于计算机视觉的应用场景',options:['A. 视频监控分析','B. AI写诗','C. 工业视觉检测','D. OCR文字识别'],answer:'ACD',analysis:''},
+{id:119,type:'multiple',question:'工业零件机器视觉检测与人工检测相比，有哪些优势？',options:['A. 更灵活','B. 效率高','C. 稳定可靠','D. 24小时不眠不休'],answer:'BCD',analysis:''},
+{id:120,type:'multiple',question:'随着计算机视觉技术、网络技术的日趋普及与成熟，（ ）已经成为平安城市建设的一种必然趋势',options:['A. 高清化','B. 公开化','C. 网络化','D. 智能化'],answer:'ACD',analysis:'公开化不对，治安视频管理要保护居民隐私'},
+{id:121,type:'multiple',question:'平安城市平台可以为哪些实战任务提供保障？',options:['A. 治安防控','B. 视频侦查','C. 指挥调度','D. 新闻报道'],answer:'ABC',analysis:'新闻报道选项不对，治安视频管理要保护居民隐私'},
+{id:122,type:'multiple',question:'平安城市数据可以来源于以下哪些终端设备？',options:['A. 单兵、车载监控','B. 治安监控','C. 卡口电警','D. 人员卡口'],answer:'ABCD',analysis:''},
+{id:123,type:'multiple',question:'公安视频侦查平台，可以通过行为分析技术对实时视频进行智能分析，具体包括哪些行为分析',options:['A. 穿越警戒面','B. 非法停车','C. 物品遗留','D. 区域入侵'],answer:'ABCD',analysis:''},
+{id:124,type:'multiple',question:'一张图像分辨率为300*200，关于这张图像以下说法正确的是',options:['A. 这张图像高度为300，宽度为200','B. 如果是黑白图像，这样图像大小为7500Bytes','C. 如果是灰度图像，这样图像的大小为60000Bytes','D. 如果真彩图像，这张图像的大小为60000Bytes'],answer:'BC',analysis:'A选项反了，宽度是300，高度是200；D选项真彩为：像素数*3Bytes'},
+{id:125,type:'multiple',question:'卷积神经网络中的典型模式是',options:['A. 网络中最后的几个层是全连接层','B. 网络中最开始的几个层是全连接层','C. 多个连续的池化层，然后跟着一个卷积层','D. 卷积层后为池化层，然后还是卷积层-池化层'],answer:'AD',analysis:''},
+{id:126,type:'multiple',question:'关于mnist手写数字集，下列说法正确的是',options:['A. mnist手写数字集是每张大小为：28*28的彩色图像','B. mnist手写数字集包含训练数据集：60000项，测试数据集10000项','C. mnist手写数字集的标签为10个，分别是0~9共10个数字','D. mnist手写数字集可以使用CNN神经网络进行训练'],answer:'BCD',analysis:''},
+{id:127,type:'multiple',question:'循环神经网络RNN可以处理那些情况',options:['A. 多对多的非同步序列输入和序列输出，如机器翻译中输入英文语句然后翻译为法语形式输出','B. 一对多的序列输出。如输出一张图片，生成输出一段文字序列','C. 多对多的同步序列输入输出。如词性标注等','D. 多对一的处理，如判断一段文字的情感分类'],answer:'ABCD',analysis:''},
+{id:128,type:'multiple',question:'以下说法错误的是',options:['A. 卷积神经网络是一个全连接的神经网络，中间层通常包含多个卷积层','B. 池化不会丢失图像的信息，也不会降低其空间分辨率','C. 池化会降低图像的分辨率','D. 激活函数都是非线性函数'],answer:'AB',analysis:''},
+// 判断题
+{id:129,type:'judge',question:'卷积计算的目的是提取输入的不同特征',options:['正确','错误'],answer:'正确',analysis:''},
+{id:130,type:'judge',question:'训练CNN时，可以对输入进行旋转、平移、缩放等预处理提高模型泛化能力',options:['正确','错误'],answer:'正确',analysis:''},
+{id:131,type:'judge',question:'将在深度网络学习的训练过程中，对于神经网络单元，按照一定的概率将其暂时从网络中丢弃的方法称作Dropout',options:['正确','错误'],answer:'正确',analysis:''},
+{id:132,type:'judge',question:'池化层可以非常有效地缩小参数矩阵的尺寸，从而减少后面的卷积层或者全连接层中的参数数量',options:['正确','错误'],answer:'正确',analysis:''},
+{id:133,type:'judge',question:'多伦多大学的Geoffrey Hinton教授利用预训练的方式来缓解局部最优解的问题，提出了真正意义上的深度神经网络，从而掀起了第二次机器学习热潮--"深度学习"',options:['正确','错误'],answer:'正确',analysis:''},
+{id:134,type:'judge',question:'正则化方法是一种通过引入额外的新信息来解决机器学习中过拟合问题的方法',options:['正确','错误'],answer:'正确',analysis:''},
+{id:135,type:'judge',question:'全连接的神经网络应用于图像处理时可能会导致一个严重的参数数量的膨胀的问题',options:['正确','错误'],answer:'正确',analysis:''},
+{id:136,type:'judge',question:'卷积神经网络的英文简称是CNN',options:['正确','错误'],answer:'正确',analysis:''},
+{id:137,type:'judge',question:'风格迁移一般是画家画出来，不能通过计算机自动实现',options:['正确','错误'],answer:'错误',analysis:''},
+{id:138,type:'judge',question:'人的视觉系统的信息处理是分级的，高层的特征是低层特征的组合，从低层到高层的特征表示越来越抽象，越来越能表现语义或者意图',options:['正确','错误'],answer:'正确',analysis:''},
+{id:139,type:'judge',question:'如果增加多层感知机（Multilayer Perceptron）的隐藏层层数，分类误差便会减小',options:['正确','错误'],answer:'错误',analysis:''},
+{id:140,type:'judge',question:'多音节是中国语言文化的特性',options:['正确','错误'],answer:'正确',analysis:''},
+{id:141,type:'judge',question:'分类和回归都可用于预测，分类的输出是离散的类别值，而回归的输出是连续值',options:['正确','错误'],answer:'正确',analysis:''},
+{id:142,type:'judge',question:'K-Means是最流行的聚类方法',options:['正确','错误'],answer:'正确',analysis:''},
+{id:143,type:'judge',question:'sklearn包中的preprocessing主要用于数据预处理',options:['正确','错误'],answer:'正确',analysis:''},
+{id:144,type:'judge',question:'K-Means是最流行的分类方法',options:['正确','错误'],answer:'错误',analysis:''},
+{id:145,type:'judge',question:'深度学习技术离不开大数据技术，因为需要巨大的数据来源进行模型训练',options:['正确','错误'],answer:'正确',analysis:''},
+{id:146,type:'judge',question:'计算机视觉（Computer Vision，CV）是一门研究如何使机器"看"的科学',options:['正确','错误'],answer:'正确',analysis:''},
+{id:147,type:'judge',question:'对人类而言，获取信息最多的感官是视觉',options:['正确','错误'],answer:'正确',analysis:''},
+{id:148,type:'judge',question:'计算机视觉也像人类一样，只能处理可见光范围的信息',options:['正确','错误'],answer:'错误',analysis:''},
+{id:149,type:'judge',question:'自动驾驶中常用到毫米波雷达，毫米波的波长比可见光短',options:['正确','错误'],answer:'错误',analysis:'可见光400-780nm，毫米波mm级别'},
+{id:150,type:'judge',question:'热成像技术提供了一种安全、无损伤的数据获取手段；在医学、生态学、动物学等领域已有大量的应用',options:['正确','错误'],answer:'正确',analysis:''},
+{id:151,type:'judge',question:'基于计算机视觉的医疗影像自动分析技术，可以帮助医生提升诊断的准确性和阅片效率',options:['正确','错误'],answer:'正确',analysis:''},
+{id:152,type:'judge',question:'通过实时采集、监测、分析、诊断，可以实现植物生长状态判断与预测，自动生成执行控制系统的决策、建议',options:['正确','错误'],answer:'正确',analysis:''},
+{id:153,type:'judge',question:'外界物体的反射光线，经过角膜、房水，由瞳孔进入眼球内部，再经过晶状体和玻璃体的折射作用，在视网膜上能形成清晰的正立的物像',options:['正确','错误'],answer:'错误',analysis:'视网膜上成像为倒立的'},
+{id:154,type:'judge',question:'照相机成像原理与人眼基本类似，照相机的镜头相当于角膜和晶状体，而照相机的底片相当于视网膜，相机在底片上的成像称为数字图像',options:['正确','错误'],answer:'错误',analysis:'底片上的成像为模拟图像，采样量化以后才为数字图像'},
+{id:155,type:'judge',question:'二值图像指灰度图像，图像上每个像素点非黑即白',options:['正确','错误'],answer:'错误',analysis:'二值图像是黑白图像'},
+{id:156,type:'judge',question:'图像压缩分为有损压缩和无损压缩，工程图纸适合有损压缩',options:['正确','错误'],answer:'错误',analysis:'工程图纸用无损压缩'},
+{id:157,type:'judge',question:'图像压缩分为有损压缩和无损压缩，一般来讲，自然图像可以使用有损压缩',options:['正确','错误'],answer:'正确',analysis:''},
+{id:158,type:'judge',question:'灰度图像的每个像素点有255种可能的颜色',options:['正确','错误'],answer:'错误',analysis:'应该是0-255，共256种可能性'},
+{id:159,type:'judge',question:'OpenCV中的CV是Computer和Vision两个单词的缩写',options:['正确','错误'],answer:'正确',analysis:''},
+{id:160,type:'judge',question:'当在卷积神经网络中添加池化层（pooling layer）时，变换的不变性保持稳定',options:['正确','错误'],answer:'正确',analysis:''},
+{id:161,type:'judge',question:'增大卷积核的大小必然会提高卷积神经网络的性能',options:['正确','错误'],answer:'错误',analysis:''},
+{id:162,type:'judge',question:'假设在ImageNet数据集上训练卷积神经网络。然后给这个训练模型一个完全白色的图像作为输入。这个输入的输出概率对于所有类都是相等的',options:['正确','错误'],answer:'错误',analysis:''},
+{id:163,type:'judge',question:'在监督学习任务中，输出层中的神经元的数量应该与类的数量（其中类的数量大于2）匹配',options:['正确','错误'],answer:'错误',analysis:''},
+{id:164,type:'judge',question:'可以用神经网络对函数y=1/x建模吗',options:['正确','错误'],answer:'正确',analysis:''},
+// 填空题
+{id:165,type:'fill',question:'中学时期学习过最小二乘法，在机器学习是一个典型的回归题，这种算法名称是________',answer:'线性回归',analysis:''},
+{id:166,type:'fill',question:'深度神经网络英文简称是________',answer:'DNN',analysis:''},
+{id:167,type:'fill',question:'循环神经网络英文简称是________',answer:'RNN',analysis:''},
+{id:168,type:'fill',question:'CNN的中文简称________',answer:'卷积神经网络',analysis:''},
+{id:169,type:'fill',question:'补全代码使用cifar图像分类：import __空1__ np，答案格式：空1:xxx',answer:'空1:numpy as',analysis:'完整答案：第1空：numpy as；第2空：train_image.shape；第3空：test_image.shape；第4空：train_image[0]；第5空：show()'},
+{id:170,type:'fill',question:'补全代码：model = __空1__() 建立序贯模型；model.add(Conv2D(filters=__空2__, ...)) 添加卷积层产生32张图像',answer:'空1:Sequential；空2:32',analysis:''},
+{id:171,type:'fill',question:'补全代码：model.add(__空1__) 添加平坦层；model.__空2__(loss=...) 编译模型；model.__空3__(x=...) 训练模型',answer:'空1:Flatten()；空2:compile；空3:fit',analysis:''},
+{id:172,type:'fill',question:'补全以下代码，创建线性回归模型：linear = linear_model.__空1__',answer:'LinearRegression()',analysis:''},
+{id:173,type:'fill',question:'补全代码，创建k为3的KNN分类器：knn = neighbors.KNeighborsClassifier(algorithm="kdtree", __空1__)',answer:'n_neighbors=3',analysis:''},
+{id:174,type:'fill',question:'补全代码OpenCV边缘检测：__空1__ 导入OpenCV；img = cv2.__空2__("handwriting.jpg", 0) 读取图片',answer:'空1:import cv2；空2:imread',analysis:'完整答案：第1空：import cv2；第2空：imread；第3空：img；第4空：edges；第5空：imshow'},
+// 简答题
+{id:175,type:'short',question:'什么是过拟合，什么是欠拟合？',answer:'在机器学习中，过拟合是指由于模型过于复杂，尽管在训练集上分类精度很高（经验风险很小），但因模型复杂度高，导致在测试集上的期望风险仍然很高，即训练误差小但测试误差大，模型泛化能力差。\n\n欠拟合是指模型过于简单、数据集偏少或特征不足，导致在训练集上的精度不高，同时在测试集上的精度也较低，无论如何训练都无法得到有意义的参数，模型无法很好地拟合数据。',analysis:''},
+{id:176,type:'short',question:'无监督学习的应用领域有哪些？',answer:'无监督学习广泛应用于各个领域，如数据挖掘、医学影像分析、股票市场分析、计算机视觉分析、市场细分等，用于在大量无标签数据中发现数据之间的内在联系和区别。它的训练数据是无标签的，训练目标是能对观察值进行分类、聚类或区分等。',analysis:''},
+{id:177,type:'short',question:'人类驾驶汽车时需要眼观六路、耳听八方，无人驾驶汽车同样需要"眼睛"去实时地去感知周围的环境，请列举5个以上无人驾驶汽车的传感器',answer:'激光雷达、摄像头、夜视摄像头、超声波传感器、远程雷达、近程雷达等无人驾驶传感器均可。',analysis:''},
+];
 
-        // ================= 交互处理 =================
+// 状态管理
+let currentFilter = 'all';
+let searchKeyword = '';
+let userState = JSON.parse(localStorage.getItem('aiReviewState') || '{}');
 
-        // 程序题开关
-        function toggleProgramAnswer(id) {
-            const panel = document.getElementById(`answer-${id}`);
-            const btnText = document.getElementById(`btn-text-${id}`);
-            if (panel.classList.contains('h-0')) {
-                panel.classList.remove('h-0', 'hidden-panel');
-                panel.classList.add('h-auto');
-                btnText.innerText = "▼ 收起答案";
-            } else {
-                panel.classList.add('h-0', 'hidden-panel');
-                panel.classList.remove('h-auto');
-                btnText.innerText = "▶ 查看答案与解析";
-            }
-        }
+// 类型映射
+const typeNames = {
+    all: '📚 全部题目',
+    wrong: '❌ 错题本',
+    single: '🔘 单选题',
+    multiple: '☑️ 多选题',
+    judge: '✅ 判断题',
+    fill: '📝 填空题',
+    short: '💬 简答题'
+};
 
-        // 单选/判断题点击
-        function handleOptionClick(qId, optIdx) {
-            const q = questions.find(x => x.id === qId);
-            if (userProgress[qId]?.isAnswered) return; // 已答过
+// 初始化
+function init() {
+    renderNav();
+    updateBadges();
+    updateProgress();
+    renderQuestions();
+    
+    // 移动端菜单
+    document.getElementById('menuBtn').onclick = () => {
+        document.getElementById('sidebar').classList.toggle('open');
+    };
+}
 
-            if (q.category === 'multi') {
-                const btn = event.currentTarget;
-                if (btn.classList.contains('bg-blue-50')) {
-                    btn.classList.remove('bg-blue-50', 'border-blue-500');
-                    btn.dataset.selected = 'false';
-                } else {
-                    btn.classList.add('bg-blue-50', 'border-blue-500');
-                    btn.dataset.selected = 'true';
+// 渲染导航
+function renderNav() {
+    const nav = document.getElementById('navMenu');
+    const items = [
+        {key: 'all', icon: '📚', name: '全部题目', badgeClass: 'bg-gray-200 text-gray-700'},
+        {key: 'wrong', icon: '❌', name: '错题本', badgeClass: 'bg-red-100 text-red-600 font-medium'},
+        {key: 'divider'},
+        {key: 'single', icon: '🔘', name: '单选题', badgeClass: 'bg-gray-200 text-gray-700'},
+        {key: 'multiple', icon: '☑️', name: '多选题', badgeClass: 'bg-gray-200 text-gray-700'},
+        {key: 'judge', icon: '✅', name: '判断题', badgeClass: 'bg-gray-200 text-gray-700'},
+        {key: 'fill', icon: '📝', name: '填空题', badgeClass: 'bg-gray-200 text-gray-700'},
+        {key: 'short', icon: '💬', name: '简答题', badgeClass: 'bg-gray-200 text-gray-700'},
+    ];
+    
+    nav.innerHTML = items.map(item => {
+        if (item.key === 'divider') return '<div class="border-t my-4"></div>';
+        return `<button onclick="filterQuestions('${item.key}')" class="nav-item w-full flex justify-between items-center px-4 py-3 rounded-lg text-left hover:bg-gray-100 transition" data-nav="${item.key}">
+            <span>${item.icon} ${item.name}</span>
+            <span id="badge-${item.key}" class="${item.badgeClass} px-2 py-0.5 rounded-full text-sm">0</span>
+        </button>`;
+    }).join('');
+}
+
+// 过滤题目
+function filterQuestions(type) {
+    currentFilter = type;
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.querySelector(`[data-nav="${type}"]`)?.classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+    renderQuestions();
+}
+
+// 获取过滤后的题目
+function getFilteredQuestions() {
+    let questions = DATABASE;
+    
+    if (currentFilter === 'wrong') {
+        questions = questions.filter(q => userState[q.id]?.wrong === true);
+    } else if (currentFilter !== 'all') {
+        questions = questions.filter(q => q.type === currentFilter);
+    }
+    
+    if (searchKeyword) {
+        const kw = searchKeyword.toLowerCase();
+        questions = questions.filter(q => q.question.toLowerCase().includes(kw));
+    }
+    
+    return questions;
+}
+
+// 渲染题目列表
+function renderQuestions() {
+    const questions = getFilteredQuestions();
+    const container = document.getElementById('questionList');
+    const emptyState = document.getElementById('emptyState');
+    
+    document.getElementById('currentCategory').textContent = typeNames[currentFilter];
+    document.getElementById('currentCount').textContent = `共 ${questions.length} 题`;
+    
+    if (questions.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    }
+    
+    emptyState.classList.add('hidden');
+    container.innerHTML = questions.map(q => renderQuestionCard(q)).join('');
+}
+
+// 渲染单个题目卡片
+function renderQuestionCard(q) {
+    const state = userState[q.id] || {};
+    const typeLabel = {single:'单选题',multiple:'多选题',judge:'判断题',fill:'填空题',short:'简答题'}[q.type];
+    const typeColor = {single:'blue',multiple:'purple',judge:'green',fill:'orange',short:'pink'}[q.type];
+    
+    let optionsHtml = '';
+    let actionHtml = '';
+    
+    if (q.type === 'single' || q.type === 'judge') {
+        optionsHtml = (q.options || []).map((opt, i) => {
+            const letter = q.type === 'judge' ? opt : opt.charAt(0);
+            let btnClass = 'option-btn w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-blue-400 transition mb-2';
+            if (state.answered) {
+                if (state.selected === letter) {
+                    btnClass += state.correct ? ' correct' : ' wrong';
                 }
-                return;
+                if (q.answer === letter && !state.correct) {
+                    btnClass += ' correct';
+                }
             }
-
-            const isCorrect = optIdx === q.correctIndex;
-            saveAndRefresh(qId, isCorrect, [optIdx]);
-        }
-
-        // 多选题提交
-        function submitMultiAnswer(qId) {
-            const q = questions.find(x => x.id === qId);
-            const btns = document.querySelectorAll(`#card-${qId} button[onclick^="handleOptionClick"]`);
-            const selectedIndices = [];
-            
-            btns.forEach((btn, idx) => {
-                if (btn.dataset.selected === 'true') selectedIndices.push(idx);
-            });
-
-            if (selectedIndices.length === 0) {
-                alert("请至少选择一个选项");
-                return;
+            return `<button class="${btnClass}" onclick="handleSingleAnswer(${q.id}, '${letter}')" ${state.answered ? 'disabled' : ''}>${opt}</button>`;
+        }).join('');
+    } else if (q.type === 'multiple') {
+        const selected = state.selected || [];
+        optionsHtml = (q.options || []).map((opt, i) => {
+            const letter = opt.charAt(0);
+            let btnClass = 'option-btn w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-blue-400 transition mb-2';
+            if (state.answered) {
+                const isInAnswer = q.answer.includes(letter);
+                const isSelected = selected.includes(letter);
+                if (isSelected && isInAnswer) btnClass += ' correct';
+                else if (isSelected && !isInAnswer) btnClass += ' wrong';
+                else if (!isSelected && isInAnswer) btnClass += ' correct';
+            } else if (selected.includes(letter)) {
+                btnClass += ' selected';
             }
-
-            const userSet = selectedIndices.sort().toString();
-            const correctSet = q.correctIndex.sort().toString();
-            const isCorrect = userSet === correctSet;
-
-            saveAndRefresh(qId, isCorrect, selectedIndices);
+            return `<button class="${btnClass}" onclick="handleMultipleSelect(${q.id}, '${letter}')" ${state.answered ? 'disabled' : ''}>${opt}</button>`;
+        }).join('');
+        if (!state.answered) {
+            actionHtml = `<button onclick="submitMultiple(${q.id})" class="mt-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">提交答案</button>`;
         }
+    } else if (q.type === 'fill' || q.type === 'short') {
+        actionHtml = `<button onclick="toggleAnswer(${q.id})" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition" id="toggleBtn-${q.id}">
+            💡 ${state.showAnswer ? '隐藏答案' : '查看答案'}
+        </button>
+        <div id="answer-${q.id}" class="${state.showAnswer ? '' : 'hidden'} mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+            <div class="font-medium text-green-800 mb-2">✅ 参考答案：</div>
+            <div class="text-gray-700 whitespace-pre-wrap">${q.answer}</div>
+            ${q.analysis ? `<div class="mt-2 text-sm text-gray-500">💡 ${q.analysis}</div>` : ''}
+        </div>`;
+    }
+    
+    // 结果显示
+    let resultHtml = '';
+    if (state.answered && (q.type === 'single' || q.type === 'multiple' || q.type === 'judge')) {
+        resultHtml = `<div class="mt-4 p-3 rounded-lg ${state.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}">
+            ${state.correct ? '✅ 回答正确！' : `❌ 回答错误，正确答案是：${q.answer}`}
+            ${q.analysis ? `<div class="mt-1 text-sm opacity-80">💡 ${q.analysis}</div>` : ''}
+        </div>`;
+    }
+    
+    return `<div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100" id="card-${q.id}">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="px-2 py-1 bg-${typeColor}-100 text-${typeColor}-700 text-xs rounded-full">${typeLabel}</span>
+            <span class="text-gray-400 text-sm">#${q.id}</span>
+            ${state.wrong ? '<span class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full">错题</span>' : ''}
+            ${state.correct ? '<span class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded-full">已掌握</span>' : ''}
+        </div>
+        <div class="text-gray-800 text-lg mb-4 leading-relaxed">${q.question}</div>
+        <div class="space-y-2">${optionsHtml}</div>
+        ${actionHtml}
+        ${resultHtml}
+    </div>`;
+}
 
-        function saveAndRefresh(qId, isCorrect, selectedIndices) {
-            userProgress[qId] = {
-                isAnswered: true,
-                isCorrect: isCorrect,
-                selectedIndices: selectedIndices
-            };
-            saveProgress();
-            
-            // 刷新逻辑：
-            // 如果在错题本模式下，答对了，该题应该消失（但为了反馈，可暂留一下或直接消失）
-            // 这里为了简单和直观，我们重新渲染列表
-            // 如果是在全部模式下，答完了显示解析
-            
-            if (currentCategory === 'mistakes' && isCorrect) {
-                // 答对了，延时移除，给用户一点反馈时间
-                refreshCard(qId); // 先显示正确状态
-                setTimeout(() => {
-                    filterCategory('mistakes'); // 然后刷新列表，移除该题
-                }, 1500);
-            } else {
-                refreshCard(qId);
-            }
-        }
-        
-        function saveProgress() {
-            localStorage.setItem('ai_quiz_progress_v2', JSON.stringify(userProgress));
-            updateCounts();
-        }
+// 单选/判断题答题
+function handleSingleAnswer(id, selected) {
+    const q = DATABASE.find(x => x.id === id);
+    const correct = selected === q.answer;
+    
+    userState[id] = { answered: true, selected, correct, wrong: !correct };
+    saveState();
+    
+    if (currentFilter === 'wrong' && correct) {
+        setTimeout(() => {
+            const card = document.getElementById(`card-${id}`);
+            card.classList.add('fade-out');
+            setTimeout(() => {
+                userState[id].wrong = false;
+                saveState();
+                renderQuestions();
+                updateBadges();
+                updateProgress();
+            }, 500);
+        }, 1500);
+    } else {
+        renderQuestions();
+    }
+    
+    updateBadges();
+    updateProgress();
+}
 
-        function refreshCard(qId) {
-            // 只刷新单个卡片不太容易（因为要生成HTML），这里简单地刷新整个列表
-            // 在数据量不大的情况下，性能是可以接受的
-            // 为了保持滚动位置，可以记录一下
-            // 实际上，为了代码简单，我们重新渲染当前的 filter
-            const q = questions.find(x => x.id === qId);
-            
-            // 如果在错题本里点击了重做，我们需要保证它还在列表里
-            // userProgress[qId] 此时已被删除
-            // 如果是 mistakes 视图，filter 会把它过滤掉（因为它变成未答了，不符合 !isCorrect）
-            // 所以重做时，我们需要特殊处理渲染逻辑：把这个 ID 临时加回去？
-            // 或者：简单地把视图切换回“全部”并定位到该题？
-            // 最好的体验是：变成未答状态留在原地。
-            
-            // 修正方案：retryQuestion 已删除记录。
-            // 如果当前是 mistakes 视图，刷新会导致它消失。
-            // 我们在 retryQuestion 里已经处理了。
-            // 这里主要处理 handleOptionClick 后的刷新。
-            
-            // 获取当前所有显示的题目
-            let filtered = [];
-            if (currentCategory === 'all') {
-                filtered = questions;
-            } else if (currentCategory === 'mistakes') {
-                // 这里有个Trick：为了让重做后的题目（未答状态）暂时显示在错题本里，
-                // 我们需要修改 filter 逻辑，或者简单地只重新渲染
-                filtered = questions.filter(q => {
-                    // 显示条件：(已答且错) OR (未答 且 刚刚被重置过?)
-                    // 无法追踪“刚刚被重置”。
-                    // 所以：错题本里点击重做 -> 题目消失 -> 用户去全部里找。这是最稳健的逻辑。
-                    // 除非我们加一个 "pendingRetry" 状态。
-                    return userProgress[q.id] && userProgress[q.id].isAnswered && !userProgress[q.id].isCorrect;
-                });
-            } else {
-                filtered = questions.filter(q => q.category === currentCategory);
-            }
-            renderQuestions(filtered);
-        }
+// 多选题选择
+function handleMultipleSelect(id, letter) {
+    if (!userState[id]) userState[id] = { selected: [] };
+    if (!userState[id].selected) userState[id].selected = [];
+    
+    const idx = userState[id].selected.indexOf(letter);
+    if (idx > -1) {
+        userState[id].selected.splice(idx, 1);
+    } else {
+        userState[id].selected.push(letter);
+    }
+    saveState();
+    renderQuestions();
+}
 
-        function resetAll() {
-            if(confirm("确定要清空所有答题记录吗？")) {
-                userProgress = {};
-                saveProgress();
-                filterCategory(currentCategory);
-            }
-        }
+// 多选题提交
+function submitMultiple(id) {
+    const q = DATABASE.find(x => x.id === id);
+    const selected = (userState[id]?.selected || []).sort().join('');
+    const correct = selected === q.answer.split('').sort().join('');
+    
+    userState[id] = { ...userState[id], answered: true, correct, wrong: !correct };
+    saveState();
+    
+    if (currentFilter === 'wrong' && correct) {
+        setTimeout(() => {
+            const card = document.getElementById(`card-${id}`);
+            card.classList.add('fade-out');
+            setTimeout(() => {
+                userState[id].wrong = false;
+                saveState();
+                renderQuestions();
+                updateBadges();
+                updateProgress();
+            }, 500);
+        }, 1500);
+    } else {
+        renderQuestions();
+    }
+    
+    updateBadges();
+    updateProgress();
+}
 
-        // 初始化
-        document.addEventListener('DOMContentLoaded', init);
-    </script>
+// 切换答案显示
+function toggleAnswer(id) {
+    if (!userState[id]) userState[id] = {};
+    userState[id].showAnswer = !userState[id].showAnswer;
+    userState[id].answered = true;
+    saveState();
+    renderQuestions();
+    updateProgress();
+}
+
+// 搜索
+function handleSearch(keyword) {
+    searchKeyword = keyword;
+    renderQuestions();
+}
+
+// 更新徽章
+function updateBadges() {
+    document.getElementById('badge-all').textContent = DATABASE.length;
+    document.getElementById('badge-wrong').textContent = DATABASE.filter(q => userState[q.id]?.wrong).length;
+    document.getElementById('badge-single').textContent = DATABASE.filter(q => q.type === 'single').length;
+    document.getElementById('badge-multiple').textContent = DATABASE.filter(q => q.type === 'multiple').length;
+    document.getElementById('badge-judge').textContent = DATABASE.filter(q => q.type === 'judge').length;
+    document.getElementById('badge-fill').textContent = DATABASE.filter(q => q.type === 'fill').length;
+    document.getElementById('badge-short').textContent = DATABASE.filter(q => q.type === 'short').length;
+}
+
+// 更新进度
+function updateProgress() {
+    const total = DATABASE.length;
+    const answered = DATABASE.filter(q => userState[q.id]?.answered).length;
+    const percent = total > 0 ? Math.round((answered / total) * 100) : 0;
+    
+    document.getElementById('progressText').textContent = percent + '%';
+    document.getElementById('progressBar').style.width = percent + '%';
+    document.getElementById('progressDetail').textContent = `已完成 ${answered} / ${total} 题`;
+}
+
+// 保存状态
+function saveState() {
+    localStorage.setItem('aiReviewState', JSON.stringify(userState));
+}
+
+// 重置进度
+function resetProgress() {
+    if (confirm('确定要重置所有学习进度吗？')) {
+        userState = {};
+        saveState();
+        renderQuestions();
+        updateBadges();
+        updateProgress();
+    }
+}
+
+// 启动
+init();
+</script>
 </body>
 </html>
